@@ -51,15 +51,24 @@ input[type=checkbox]{width:26px;height:26px;accent-color:var(--ink);flex:none}
 @keyframes bounce{0%{transform:scale(0)}60%{transform:scale(1.3)}}
 @keyframes shake{25%{transform:translateX(-12px)}75%{transform:translateX(12px)}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.c4{background:#8be0a4}.c5{background:#ff9ecb}.c6{background:#ffa94d}.c7{background:#cfd8e6}
+input[type=number]{width:76px}
+#mute,#mm{position:fixed;top:8px;z-index:9;padding:6px 10px}#mute{right:8px}#mm{right:62px}
+.em{font-size:1.5rem;padding:4px 8px;background:transparent;box-shadow:none}.em.on{outline:3px solid var(--b)}
+.pod{display:flex;justify-content:center;align-items:flex-end;gap:10px;margin:16px 0}
+.pc{display:flex;flex-direction:column;align-items:center;flex:1;max-width:160px}
+.pb{width:100%;border-radius:12px 12px 0 0;display:grid;place-items:center;font-size:2rem;font-weight:900;color:var(--ink);transform-origin:bottom}
+@keyframes grow{from{transform:scaleY(0)}}
 </style>
 </head>
 <body>
-<button id="mute" class="o s" onclick="mute=!mute;localStorage.setItem('qz_mute',mute?1:0);this.textContent=mute?'🔇':'🔊'" aria-label="Toggle sound"></button>
+<button id="mm" class="o s" onclick="mm=!mm;localStorage.setItem('qz_mm',mm?1:0);this.textContent=mm?'🎵 off':'🎵';music(mw)" aria-label="Toggle music"></button>
+<button id="mute" class="o s" onclick="mute=!mute;localStorage.setItem('qz_mute',mute?1:0);this.textContent=mute?'🔇':'🔊'" aria-label="Toggle sound effects"></button>
 <main>
 <section id="home">
   <h1 class="logo">Quizzy</h1>
   <div class="card">
-    <h2>Join a game</h2>
+    <h2>Join a game</h2><p><small>Pick your character</small></p><div id="ems" class="row" style="margin-bottom:8px"></div>
     <div class="row">
       <input id="code" placeholder="Game code" inputmode="numeric">
       <input id="nick" placeholder="Nickname" maxlength="16">
@@ -83,7 +92,7 @@ input[type=checkbox]{width:26px;height:26px;accent-color:var(--ink);flex:none}
     <button class="g" onclick="saveQ()">Save</button>
     <button class="o" onclick="home()">Cancel</button>
   </div>
-  <p><small>Tick every correct answer. Ticking more than one makes it a select-all question. Press Ctrl+V to paste an image into the selected question.</small></p>
+  <p><small>Tick every correct answer; the label on each question shows whether it has one right answer or several. Press Ctrl+V to paste an image into the selected question.</small></p>
   <div id="qs"></div>
   <button onclick="addQ()">+ Add question</button>
 </section>
@@ -95,18 +104,41 @@ input[type=checkbox]{width:26px;height:26px;accent-color:var(--ink);flex:none}
 <script>
 const $=s=>document.querySelector(s),
 esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]),
-LT="ABCD",KEY="quizzy_games",
+LT="ABCDEFGH",KEY="quizzy_games",
 load=()=>{try{const g=JSON.parse(localStorage.getItem(KEY))||[];g.forEach(x=>x.qs.forEach(q=>{if(!Array.isArray(q.ok))q.ok=[q.ok|0]}));return g}catch(e){return[]}},
 save=g=>{try{localStorage.setItem(KEY,JSON.stringify(g));return 1}catch(e){alert("Browser storage is full. Use fewer or smaller images.")}},
 show=v=>["home","edit","host","play"].forEach(x=>$("#"+x).hidden=x!=v),
-blank=()=>({q:"",img:"",a:["","","",""],ok:[0],time:20}),
+blank=()=>({q:"",img:"",type:"choice",a:["","","",""],ok:[0],txt:"",tol:1,time:20}),
 live=()=>Object.values(players).filter(p=>p.c.open),
 bc=m=>live().forEach(p=>p.c.send(m)),
 rank=()=>Object.values(players).sort((a,b)=>b.score-a.score),
-board=n=>rank().slice(0,n).map((p,i)=>`<div class="card row" style="animation:rise .4s ${i*.1}s backwards"><b>${i+1}</b><span style="flex:1;text-align:left">${esc(p.name)}</span><b>${p.score}</b></div>`).join("")||"<p>No players</p>",
+board=(n,f=0)=>rows(lb(n),f)||"<p>No players</p>",
 pscr=h=>{show("play");$("#play").innerHTML=h};
 let cur,peer,H,pc,over,fq,tk,pick=[],multi,AC,players={},mute=localStorage.getItem("qz_mute")=="1";
 $("#mute").textContent=mute?"🔇":"🔊";
+const EM=["🐱","🐶","🦊","🐼","🐸","🦄","🐙","🐵","🦁","🐯","🐧","🐳","🐲","🤖","👻","🚀"],
+PAT=[0,4,7,12,7,4,0,4,5,9,12,17,12,9,5,9,7,11,14,19,14,11,7,11,0,4,7,12,7,4,2,5],
+norm=s=>String(s).toLowerCase().trim().replace(/\s+/g," "),
+acc=q=>(q.txt||"").split(",").map(norm).filter(Boolean),
+lev=(a,b)=>{let p=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;i++){const c=[i];for(let j=1;j<=b.length;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]==b[j-1]?0:1));p=c}return p[b.length]};
+let mm=localStorage.getItem("qz_mm")=="1",em=localStorage.getItem("qz_em")||EM[0],mw=0,mi,bt=0;
+$("#mm").textContent=mm?"🎵 off":"🎵";
+function music(on){
+  mw=on;clearInterval(mi);mi=0;
+  if(!on||mm)return;
+  mi=setInterval(()=>{try{
+    AC=AC||new AudioContext();
+    const t=AC.currentTime,o=AC.createOscillator(),g=AC.createGain(),n=PAT[bt++%PAT.length];
+    o.type="triangle";o.frequency.value=220*2**(n/12);
+    g.gain.setValueAtTime(.05,t);g.gain.exponentialRampToValueAtTime(.001,t+.2);
+    o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+.2);
+  }catch(e){}},200);
+}
+function emUi(){$("#ems").innerHTML=EM.map(e=>`<button class="em ${e==em?"on":""}" onclick="em='${e}';localStorage.setItem('qz_em',em);emUi()">${e}</button>`).join("")}
+emUi();
+function rows(l,f=0){return l.slice(f).map((p,i)=>`<div class="card row" style="animation:rise .4s ${i*.1}s backwards"><b>${i+f+1}</b><span style="font-size:1.6rem">${p.e}</span><span style="flex:1;text-align:left">${esc(p.n)}</span><b>${p.s}</b></div>`).join("")}
+function lb(n){return rank().slice(0,n).map(p=>({n:p.name,e:p.e,s:p.score}))}
+function podium(l){return `<div class="pod">${[1,0,2].map(i=>l[i]?`<div class="pc"><div style="font-size:2.4rem">${l[i].e}</div><b>${esc(l[i].n)}</b><small>${l[i].s}</small><div class="pb c${[1,2,0][i]}" style="height:${[120,85,60][i]}px;animation:grow .8s ${.2+(2-i)*.4}s backwards">${i+1}</div></div>`:"").join("")}</div>`}
 
 /* ---------- sound ---------- */
 const NOTES={tick:[[880,.05]],click:[[600,.04]],pop:[[520,.06],[780,.08]],join:[[660,.08],[880,.12]],go:[[392,.1],[523,.1],[659,.1],[784,.25]],ok:[[523,.1],[659,.1],[784,.25]],no:[[260,.15],[196,.3]],end:[[523,.15],[659,.15],[784,.15],[1047,.4]]};
@@ -139,7 +171,7 @@ function clock(t,end,snd){
 
 /* ---------- library ---------- */
 function home(){
-  show("home");
+  show("home");music(0);
   const f=$("#find").value.toLowerCase();
   $("#lib").innerHTML=load().filter(x=>x.title.toLowerCase().includes(f)).map(x=>
     `<div class="card row"><div style="flex:1"><b>${esc(x.title)}</b><br><small>${x.qs.length} questions</small></div>
@@ -162,12 +194,13 @@ function exp(id){
 function clean(o){
   if(!o||!Array.isArray(o.qs)||!o.qs.length)throw 0;
   return{id:""+Date.now()+Math.floor(Math.random()*1e3),title:String(o.title||"Imported quiz").slice(0,80),
-    qs:o.qs.slice(0,100).map(q=>({
-      q:String(q.q||"").slice(0,200),
-      img:/^data:image\//.test(q.img)?q.img:"",
-      a:[0,1,2,3].map(i=>String(q.a?.[i]||"").slice(0,100)),
-      ok:(x=>x.length?x:[0])([...new Set((Array.isArray(q.ok)?q.ok:[q.ok]).map(Number).filter(x=>x>=0&&x<4))]),
-      time:[10,20,30,60].includes(+q.time)?+q.time:20}))};
+    qs:o.qs.slice(0,100).map(q=>{
+      const a=(Array.isArray(q.a)?q.a:[]).slice(0,8).map(x=>String(x||"").slice(0,100));
+      while(a.length<2)a.push("");
+      return{q:String(q.q||"").slice(0,200),img:/^data:image\//.test(q.img)?q.img:"",type:q.type=="text"?"text":"choice",a,
+        ok:(x=>x.length?x:[0])([...new Set((Array.isArray(q.ok)?q.ok:[q.ok]).map(Number).filter(x=>x>=0&&x<a.length))]),
+        txt:String(q.txt||"").slice(0,200),tol:Math.min(9,Math.max(0,Math.round(+q.tol)||0)),
+        time:Math.min(300,Math.max(5,Math.round(+q.time)||20))}})};
 }
 function add(o){
   try{
@@ -189,26 +222,40 @@ function edit(id){
   cur=id?JSON.parse(JSON.stringify(load().find(x=>x.id==id))):{id:""+Date.now(),title:"",qs:[blank()]};
   fq=undefined;show("edit");ed();
 }
+const ind=q=>q.type=="text"?"✎ Typed answer":q.ok.length>1?"☑ Multiple right answers":"◉ One right answer";
 function ed(){
   $("#t").value=cur.title;
   $("#qs").innerHTML=cur.qs.map((q,i)=>`<div class="card" onpointerdown="fq=${i}" onfocusin="fq=${i}">
-    <div class="row"><b>${i+1}</b>
+    <div class="row"><button class="o s" onclick="cur.qs[${i}].c=!cur.qs[${i}].c;ed()" aria-label="Collapse or expand">${q.c?"▸":"▾"}</button><b>${i+1}</b>
       <input placeholder="Question" value="${esc(q.q)}" oninput="cur.qs[${i}].q=this.value">
-      <select onchange="cur.qs[${i}].time=+this.value">${[10,20,30,60].map(t=>`<option value="${t}" ${t==q.time?"selected":""}>${t}s</option>`).join("")}</select>
-      <button class="r" onclick="cur.qs.splice(${i},1);ed()" aria-label="Delete question">✕</button></div>
-    <div class="row" style="margin:8px 0">
+      ${q.c?`<small>${ind(q)} · ${q.time}s</small>`:""}</div>
+    ${q.c?"":`<div class="row" style="margin:8px 0">
+      <select style="width:auto" onchange="cur.qs[${i}].type=this.value;ed()"><option value="choice">Pick an answer</option><option value="text" ${q.type=="text"?"selected":""}>Type the answer</option></select>
+      <span class="badge" id="mb${i}">${ind(q)}</span>
+      <label class="row" style="gap:4px"><input type="number" min="5" max="300" value="${q.time}" oninput="cur.qs[${i}].time=+this.value"> sec</label>
+      <button class="r s" style="margin-left:auto" onclick="cur.qs.splice(${i},1);ed()">Delete</button></div>
+    <div class="row" style="margin-bottom:8px">
       ${q.img?`<img src="${esc(q.img)}" alt="" style="height:70px;border-radius:8px"><button class="o s" onclick="cur.qs[${i}].img='';ed()">Remove image</button>`:""}
-      <input type="file" accept="image/*" onchange="pic(${i},this.files[0])"><small>or paste with Ctrl+V</small>
-      <span class="badge" id="mb${i}" ${q.ok.length>1?"":"hidden"}>select all that apply</span></div>
-    <div class="grid">${q.a.map((a,j)=>`<label class="at c${j}">
+      <input type="file" accept="image/*" onchange="pic(${i},this.files[0])"><small>or paste with Ctrl+V</small></div>
+    ${q.type=="text"?`<label>Accepted answers, separated by commas<input value="${esc(q.txt)}" oninput="cur.qs[${i}].txt=this.value"></label>
+      <label class="row" style="margin-top:8px">Allowed typos <input type="number" min="0" max="9" value="${q.tol??1}" oninput="cur.qs[${i}].tol=+this.value"> letters wrong, missing or extra</label>`
+    :`<div class="grid">${q.a.map((a,j)=>`<label class="at c${j}">
       <input type="checkbox" title="Correct answer" ${q.ok.includes(j)?"checked":""} onchange="tog(${i},${j},this.checked)">
-      <input placeholder="Answer ${LT[j]}" value="${esc(a)}" oninput="cur.qs[${i}].a[${j}]=this.value"></label>`).join("")}</div>
+      <input placeholder="Answer ${LT[j]}" value="${esc(a)}" oninput="cur.qs[${i}].a[${j}]=this.value">
+      ${q.a.length>2?`<button class="s" style="background:var(--ink);color:#fff" onclick="rmA(${i},${j})" aria-label="Remove answer">✕</button>`:""}</label>`).join("")}</div>
+      ${q.a.length<8?`<p><button class="o s" onclick="cur.qs[${i}].a.push('');ed()">+ Add answer</button></p>`:""}`}`}
   </div>`).join("");
+}
+function rmA(i,j){
+  const q=cur.qs[i];
+  q.a.splice(j,1);q.ok=q.ok.filter(x=>x!=j).map(x=>x>j?x-1:x);
+  if(!q.ok.length)q.ok=[0];
+  ed();
 }
 function tog(i,j,on){
   const q=cur.qs[i];
   q.ok=on?[...new Set([...q.ok,j])]:q.ok.filter(x=>x!=j);
-  $("#mb"+i).hidden=q.ok.length<2;
+  $("#mb"+i).textContent=ind(q);
 }
 function addQ(){cur.qs.push(blank());ed();scrollTo(0,document.body.scrollHeight)}
 function pic(i,f){
@@ -229,9 +276,14 @@ addEventListener("paste",e=>{
 function saveQ(){
   if(!cur.title.trim())return alert("Give your quiz a title.");
   if(!cur.qs.length)return alert("Add at least one question.");
-  for(const [i,q] of cur.qs.entries())
-    if(!q.q.trim()||q.a.filter(x=>x.trim()).length<2||!q.ok.length||q.ok.some(j=>!q.a[j].trim()))
-      return alert("Question "+(i+1)+" needs text, at least 2 answers, and every ticked answer filled in.");
+  for(const [i,q] of cur.qs.entries()){
+    q.time=Math.min(300,Math.max(5,Math.round(q.time)||20));
+    q.tol=Math.min(9,Math.max(0,Math.round(q.tol??1)||0));
+    const text=q.type=="text",
+    bad=!q.q.trim()||(text?!acc(q).length:q.a.filter(x=>x.trim()).length<2||!q.ok.length||q.ok.some(j=>!q.a[j].trim()));
+    if(bad)return alert("Question "+(i+1)+" is incomplete. Add the question text and "+(text?"at least one accepted answer.":"at least 2 answers, with every ticked answer filled in."));
+  }
+  cur.qs.forEach(q=>delete q.c);
   const g=load(),k=g.findIndex(x=>x.id==cur.id);
   k<0?g.push(cur):g[k]=cur;
   if(save(g))home();
@@ -256,7 +308,7 @@ function mk(n){
   });
 }
 function lobby(){
-  H.st="lobby";show("host");
+  H.st="lobby";show("host");music(1);
   const u=location.href.split(/[?#]/)[0]+"?code="+H.code;
   $("#host").innerHTML=`<h2>${esc(H.g.title)}</h2><p>Join with this code</p><div class="code">${H.code}</div>
   <p><small>${esc(u)}</small></p>
@@ -275,7 +327,7 @@ function lobby(){
 function lobbyUpd(){
   const l=$("#pl");if(!l||H.st!="lobby")return;
   const a=live();
-  l.innerHTML=a.map(p=>`<span class="chip">${esc(p.name)}</span>`).join("")||"<p>Waiting for players…</p>";
+  l.innerHTML=a.map(p=>`<span class="chip">${p.e} ${esc(p.name)}</span>`).join("")||"<p>Waiting for players…</p>";
   $("#go").disabled=!a.length;
 }
 function onMsg(c,m){
@@ -283,10 +335,10 @@ function onMsg(c,m){
     if(H.st!="lobby")return c.send({t:"no",why:"That game has already started."});
     let n=(m.name+"").slice(0,16),b=n,k=2;
     while(Object.values(players).some(p=>p.name==n))n=b+" "+k++;
-    players[c.peer]={name:n,score:0,c,ans:null};
+    players[c.peer]={name:n,e:EM.includes(m.e)?m.e:EM[0],score:0,c,ans:null};
     c.send({t:"in",name:n});sfx("join");lobbyUpd();
   }else if(m.t=="ans"){
-    const p=players[c.peer],a=Array.isArray(m.a)?[...new Set(m.a.filter(x=>Number.isInteger(x)&&x>=0&&x<4))]:[];
+    const q=H.g.qs[H.i]||{},p=players[c.peer],a=q.type=="text"?(typeof m.a=="string"?m.a.trim().slice(0,40):""):Array.isArray(m.a)?[...new Set(m.a.filter(x=>Number.isInteger(x)&&x>=0&&x<(q.a||[]).length))]:[];
     if(H.st=="q"&&p&&p.ans==null&&a.length){
       p.ans=a;p.ms=Date.now()-H.t0;cnt();
       if(live().every(p=>p.ans!=null))reveal();
@@ -308,35 +360,36 @@ function ask(){
   H.st="q";
   const q=H.g.qs[H.i],n=H.g.qs.length,t=H.cfg.time||q.time,mu=q.ok.length>1;
   H.t=t;Object.values(players).forEach(p=>p.ans=null);H.t0=Date.now();
-  bc({t:"q",i:H.i,n,q:q.q,a:q.a,time:t,multi:mu});sfx("go");
+  bc({t:"q",i:H.i,n,q:q.q,a:q.a,time:t,multi:mu,type:q.type,img:q.img});sfx("go");
   $("#host").innerHTML=`<div class="bar"><i style="animation-duration:${t}s"></i></div>
-  <p>Question ${H.i+1} of ${n} ${mu?'<span class="badge">select all that apply</span>':""}</p><h2>${esc(q.q)}</h2>
+  <p>Question ${H.i+1} of ${n} ${q.type=="text"?'<span class="badge">type the answer</span>':mu?'<span class="badge">select all that apply</span>':""}</p><h2>${esc(q.q)}</h2>
   ${q.img?`<img src="${esc(q.img)}" alt="" style="max-width:100%;max-height:34vh;border-radius:14px">`:""}
   <div class="row" style="justify-content:space-between"><h1 id="tm">${t}</h1><span id="cnt"></span><button class="o" onclick="reveal()">Skip</button></div>
-  <div class="grid">${opts(q)}</div>`;
+  ${q.type=="text"?"<h3>Type your answer on your device</h3>":`<div class="grid">${opts(q)}</div>`}`;
   clock(t,reveal,1);cnt();
 }
 function reveal(){
   if(H.st!="q")return;
   H.st="r";clearInterval(tk);sfx("pop");
-  const q=H.g.qs[H.i],c=[0,0,0,0];
+  const q=H.g.qs[H.i],tx=q.type=="text",ac=acc(q),c=q.a.map(()=>0);
   Object.values(players).forEach(p=>{
-    const s=p.ans||[];
-    p.d=0;p.ok=s.length==q.ok.length&&q.ok.every(x=>s.includes(x));
-    s.forEach(x=>c[x]++);
+    p.d=0;
+    if(tx){const s=p.ans?norm(p.ans):"";p.ok=!!s&&ac.some(x=>lev(x,s)<=Math.min(q.tol??1,Math.max(0,x.length-1)))}
+    else{const s=p.ans||[];p.ok=s.length==q.ok.length&&q.ok.every(x=>s.includes(x));s.forEach(x=>c[x]++)}
     if(p.ok){p.d=H.cfg.speed?Math.max(100,Math.round(1000*(1-p.ms/1000/H.t/2))):1000;p.score+=p.d}
   });
-  const r=rank();
-  r.forEach((p,i)=>p.c.open&&p.c.send({t:"r",ok:p.ok,got:p.ans!=null,d:p.d,s:p.score,r:i+1,n:r.length}));
-  $("#host").innerHTML=`<h2>${esc(q.q)}</h2><div class="grid">${opts(q,c)}</div>
-  ${H.cfg.lb?"<h2>Leaderboard</h2>"+board(5):""}
+  const r=rank(),L=H.cfg.lb?lb(5):0,hit=r.filter(p=>p.ok).length;
+  r.forEach((p,i)=>p.c.open&&p.c.send({t:"r",ok:p.ok,got:p.ans!=null,d:p.d,s:p.score,r:i+1,n:r.length,ca:tx?q.txt:"",lb:L}));
+  $("#host").innerHTML=`<h2>${esc(q.q)}</h2>
+  ${tx?`<div class="card"><p>Accepted answers</p><h1>${esc(q.txt)}</h1><p>${hit} of ${r.length} got it right</p></div>`:`<div class="grid">${opts(q,c)}</div>`}
+  ${L?"<h2>Leaderboard</h2>"+board(5):""}
   <p><button class="g" onclick="nextQ()">${H.i+1<H.g.qs.length?"Next question":"Finish"}</button></p>`;
 }
 function fin(){
-  H.st="end";sfx("end");
-  const r=rank();
-  r.forEach((p,i)=>p.c.open&&p.c.send({t:"end",s:p.score,r:i+1,n:r.length}));
-  $("#host").innerHTML=`<h1>Final results</h1>${board(5)}<button class="g" onclick="endHost()">Done</button>`;
+  H.st="end";sfx("end");music(0);
+  const r=rank(),top=lb(3);
+  r.forEach((p,i)=>p.c.open&&p.c.send({t:"end",s:p.score,r:i+1,n:r.length,top}));
+  $("#host").innerHTML=`<h1>Final results</h1>${podium(top)}${board(8,3)}<p><button class="g" onclick="endHost()">Done</button></p>`;
 }
 function endHost(){clearInterval(tk);peer&&peer.destroy();peer=0;home()}
 
@@ -350,29 +403,32 @@ function join(){
   peer.on("error",e=>j.textContent=e.type=="peer-unavailable"?"No game found with that code.":"Connection error ("+e.type+").");
   peer.on("open",()=>{
     pc=peer.connect("kqz-"+code);
-    pc.on("open",()=>pc.send({t:"join",name}));
+    pc.on("open",()=>pc.send({t:"join",name,e:em}));
     pc.on("data",pmsg);
-    pc.on("close",()=>{if(!over)pscr('<h2>Host disconnected</h2><button onclick="leave()">Home</button>')});
+    pc.on("close",()=>{music(0);if(!over)pscr('<h2>Host disconnected</h2><button onclick="leave()">Home</button>')});
     setTimeout(()=>{if(!pc.open&&!$("#home").hidden)j.textContent="Could not connect. Check the code and your network."},12000);
   });
 }
 function pmsg(m){
   if(m.t=="no"){leave();$("#jmsg").textContent=m.why}
-  else if(m.t=="in"){sfx("join");pscr(`<h2>You’re in, ${esc(m.name)}!</h2><p>Watch the host screen…</p>`)}
+  else if(m.t=="in"){sfx("join");music(1);pscr(`<div style="font-size:5rem;animation:bounce .6s">${em}</div><h2>You’re in, ${esc(m.name)}!</h2><p>Watch the host screen…</p>`)}
   else if(m.t=="q"){
     pick=[];multi=m.multi;sfx("pop");
     pscr(`<div class="bar"><i style="animation-duration:${m.time}s"></i></div><p>Question ${m.i+1} of ${m.n}</p><h1 id="tm">${m.time}</h1><h3>${esc(m.q)}</h3>
-    ${m.multi?'<p><span class="badge">select all that apply</span></p>':""}
+    ${m.img?`<img src="${esc(m.img)}" alt="" style="max-width:100%;max-height:30vh;border-radius:14px">`:""}
+    ${m.type=="text"?`<p><input id="ta" maxlength="40" autocomplete="off" placeholder="Type your answer" style="font-size:1.4rem;text-align:center" onkeydown="if(event.key=='Enter')sendT()"></p><button class="g" onclick="sendT()">Submit answer</button>`
+    :`${m.multi?'<p><span class="badge">select all that apply</span></p>':""}
     <div class="grid">${m.a.map((t,j)=>t.trim()?`<button class="opt c${j}" id="o${j}" style="animation-delay:${j*.07}s" onclick="tap(${j})"><span class="l">${LT[j]}</span><span>${esc(t)}</span></button>`:"").join("")}</div>
-    ${m.multi?'<p><button class="g" onclick="submit()">Submit answer</button></p>':""}`);
+    ${m.multi?'<p><button class="g" onclick="submit()">Submit answer</button></p>':""}`}`);
     clock(m.time);
   }else if(m.t=="r"){
     clearInterval(tk);sfx(m.ok?"ok":"no");
     pscr(`<div class="${m.ok?"good":"bad"}"><div style="font-size:5rem;animation:${m.ok?"bounce":"shake"} .6s">${m.ok?"🎉":m.got?"💥":"⏰"}</div>
-    <h1>${m.ok?"Correct!":m.got?"Not quite":"Too slow"}</h1><h2>+${m.d} points</h2><p>${m.s} total · place ${m.r} of ${m.n}</p></div>`);
+    <h1>${m.ok?"Correct!":m.got?"Not quite":"Too slow"}</h1>${m.ca&&!m.ok?`<p>Answer: <b>${esc(m.ca)}</b></p>`:""}<h2>+${m.d} points</h2><p>${em} ${m.s} total · place ${m.r} of ${m.n}</p></div>
+    ${m.lb?"<h3>Leaderboard</h3>"+rows(m.lb):""}`);
   }else if(m.t=="end"){
-    over=1;clearInterval(tk);sfx("end");
-    pscr(`<h1>Game over</h1><h2>Place ${m.r} of ${m.n}</h2><p>${m.s} points</p><button onclick="leave()">Home</button>`);
+    over=1;clearInterval(tk);sfx("end");music(0);
+    pscr(`<h1>Game over</h1>${podium(m.top)}<h2>${em} You: place ${m.r} of ${m.n}</h2><p>${m.s} points</p><button onclick="leave()">Home</button>`);
   }
 }
 function send(a){pc.send({t:"ans",a});clearInterval(tk);pscr("<h2>Answer sent!</h2><p>Waiting for the others…</p>")}
@@ -383,6 +439,7 @@ function tap(j){
   $("#o"+j).classList.toggle("sel");
 }
 function submit(){if(pick.length)send(pick)}
+function sendT(){const v=$("#ta").value.trim();if(v)send(v)}
 function leave(){over=1;clearInterval(tk);peer&&peer.destroy();peer=0;home()}
 
 /* ---------- start ---------- */
