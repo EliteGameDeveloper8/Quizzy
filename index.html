@@ -6,33 +6,58 @@
 <title>Quizzy</title>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
+:root{--ink:#0b2530;--a:#ff6f59;--b:#ffc93c;--c:#7bdff2;--d:#b79cff}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#46178f;color:#fff}
+body{margin:0;min-height:100vh;font-family:"Avenir Next Rounded","Nunito","Trebuchet MS",system-ui,sans-serif;background:linear-gradient(160deg,#06303a,#0c1c3d) fixed;color:#effcff}
 main{max-width:900px;margin:0 auto;padding:16px}
 h1,h2,h3,p{margin:.4em 0}
-.card{background:#fff;color:#222;border-radius:10px;padding:12px;margin:10px 0}
-button{font:inherit;font-weight:700;border:0;border-radius:8px;padding:10px 16px;cursor:pointer;background:#1368ce;color:#fff}
-button.g{background:#26890c}button.r{background:#e21b3c}button.o{background:#e5e5e5;color:#222}
+h1.logo{font-size:2.8rem;letter-spacing:-.04em;margin:.1em 0}
+.card{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:12px;margin:10px 0}
+button{font:inherit;font-weight:800;border:0;border-radius:12px;padding:10px 16px;cursor:pointer;background:var(--c);color:var(--ink);box-shadow:0 4px 0 rgba(0,0,0,.28);transition:transform .08s}
+button:active{transform:translateY(3px);box-shadow:none}
+button.g{background:var(--b)}button.r{background:var(--a)}
+button.o{background:transparent;color:#effcff;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
+button.s{padding:6px 10px;font-size:.85rem}
 button:disabled{opacity:.4;cursor:default}
-:focus-visible{outline:3px solid #ffd02e;outline-offset:2px}
-input,select{font:inherit;padding:9px;border:2px solid #ccc;border-radius:8px;width:100%;min-width:0}
-input[type=file],input[type=radio]{width:auto}
+:focus-visible{outline:3px solid var(--b);outline-offset:2px}
+input,select{font:inherit;padding:9px;border:0;border-radius:10px;width:100%;min-width:0;background:#fff;color:var(--ink)}
+input[type=file]{width:auto;background:none;color:inherit;padding:0}
+input[type=checkbox]{width:26px;height:26px;accent-color:var(--ink);flex:none}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .row>input:not([type]){flex:1;min-width:120px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.opt{min-height:80px;font-size:1.25rem;border-radius:8px;color:#fff;display:flex;align-items:center;gap:10px;padding:12px;text-align:left}
-.c0{background:#e21b3c}.c1{background:#1368ce}.c2{background:#d89e00}.c3{background:#26890c}
-.code{font-size:min(18vw,7rem);font-weight:900;letter-spacing:.1em}
-.chip{display:inline-block;background:#fff;color:#222;border-radius:20px;padding:6px 14px;margin:4px;font-weight:700}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.c0{background:var(--a)}.c1{background:var(--b)}.c2{background:var(--c)}.c3{background:var(--d)}
+.opt{min-height:84px;font-size:1.2rem;font-weight:800;border-radius:20px;color:var(--ink);display:flex;align-items:center;gap:12px;padding:12px;text-align:left;box-shadow:0 6px 0 rgba(0,0,0,.28);animation:pop .4s backwards}
+.opt .l{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--ink);color:#fff;flex:none}
+.opt.sel{outline:5px solid #fff;transform:scale(.96)}
+.at{display:flex;align-items:center;gap:8px;padding:8px;border-radius:14px;color:var(--ink)}
+.bar{height:10px;background:rgba(255,255,255,.15);border-radius:9px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--b);transform-origin:left;animation:drain linear forwards}
+#tm{font-size:2.6rem;margin:0;min-width:2ch}
+#tm.hot{color:var(--a);animation:beat .5s infinite alternate}
+.badge{display:inline-block;background:var(--d);color:var(--ink);font-weight:800;border-radius:20px;padding:4px 14px}
+.code{font-size:min(18vw,7rem);font-weight:900;letter-spacing:.08em;color:var(--b)}
+.chip{display:inline-block;background:var(--c);color:var(--ink);border-radius:20px;padding:6px 14px;margin:4px;font-weight:800;animation:pop .3s}
 .mid{text-align:center}
-#play{padding-top:6vh}
+.good{color:#9dffb0}.bad{color:#ffa391}
+#play{padding-top:4vh}
+#mute{position:fixed;top:8px;right:8px;z-index:9;padding:6px 10px}
+#host>*,#play>*{animation:rise .35s backwards}
+@keyframes pop{from{transform:scale(.6);opacity:0}}
+@keyframes rise{from{transform:translateY(14px);opacity:0}}
+@keyframes drain{to{transform:scaleX(0)}}
+@keyframes beat{to{transform:scale(1.25)}}
+@keyframes bounce{0%{transform:scale(0)}60%{transform:scale(1.3)}}
+@keyframes shake{25%{transform:translateX(-12px)}75%{transform:translateX(12px)}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
+<button id="mute" class="o s" onclick="mute=!mute;localStorage.setItem('qz_mute',mute?1:0);this.textContent=mute?'🔇':'🔊'" aria-label="Toggle sound"></button>
 <main>
 <section id="home">
-  <h1>Quizzy</h1>
+  <h1 class="logo">Quizzy</h1>
   <div class="card">
     <h2>Join a game</h2>
     <div class="row">
@@ -44,8 +69,10 @@ input[type=file],input[type=radio]{width:auto}
   </div>
   <div class="row">
     <h2 style="flex:1">My quizzes</h2>
-    <input id="find" placeholder="Search…" oninput="home()" style="width:150px;flex:none">
+    <input id="find" placeholder="Search…" oninput="home()" style="width:140px;flex:none">
     <button class="g" onclick="edit()">+ New quiz</button>
+    <button onclick="$('#imp').click()">Import</button>
+    <input id="imp" type="file" accept=".json,application/json" hidden onchange="imp(this.files[0]);this.value=''">
   </div>
   <div id="lib"></div>
 </section>
@@ -56,6 +83,7 @@ input[type=file],input[type=radio]{width:auto}
     <button class="g" onclick="saveQ()">Save</button>
     <button class="o" onclick="home()">Cancel</button>
   </div>
+  <p><small>Tick every correct answer. Ticking more than one makes it a select-all question. Press Ctrl+V to paste an image into the selected question.</small></p>
   <div id="qs"></div>
   <button onclick="addQ()">+ Add question</button>
 </section>
@@ -67,17 +95,47 @@ input[type=file],input[type=radio]{width:auto}
 <script>
 const $=s=>document.querySelector(s),
 esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]),
-SH="▲◆●■",KEY="quizzy_games",
-load=()=>{try{return JSON.parse(localStorage.getItem(KEY))||[]}catch(e){return[]}},
+LT="ABCD",KEY="quizzy_games",
+load=()=>{try{const g=JSON.parse(localStorage.getItem(KEY))||[];g.forEach(x=>x.qs.forEach(q=>{if(!Array.isArray(q.ok))q.ok=[q.ok|0]}));return g}catch(e){return[]}},
 save=g=>{try{localStorage.setItem(KEY,JSON.stringify(g));return 1}catch(e){alert("Browser storage is full. Use fewer or smaller images.")}},
 show=v=>["home","edit","host","play"].forEach(x=>$("#"+x).hidden=x!=v),
-blank=()=>({q:"",img:"",a:["","","",""],ok:0,time:20}),
+blank=()=>({q:"",img:"",a:["","","",""],ok:[0],time:20}),
 live=()=>Object.values(players).filter(p=>p.c.open),
 bc=m=>live().forEach(p=>p.c.send(m)),
 rank=()=>Object.values(players).sort((a,b)=>b.score-a.score),
-board=n=>rank().slice(0,n).map((p,i)=>`<div class="card row"><b>${i+1}</b><span style="flex:1;text-align:left">${esc(p.name)}</span><b>${p.score}</b></div>`).join("")||"<p>No players</p>",
+board=n=>rank().slice(0,n).map((p,i)=>`<div class="card row" style="animation:rise .4s ${i*.1}s backwards"><b>${i+1}</b><span style="flex:1;text-align:left">${esc(p.name)}</span><b>${p.score}</b></div>`).join("")||"<p>No players</p>",
 pscr=h=>{show("play");$("#play").innerHTML=h};
-let cur,peer,H,pc,over,players={};
+let cur,peer,H,pc,over,fq,tk,pick=[],multi,AC,players={},mute=localStorage.getItem("qz_mute")=="1";
+$("#mute").textContent=mute?"🔇":"🔊";
+
+/* ---------- sound ---------- */
+const NOTES={tick:[[880,.05]],click:[[600,.04]],pop:[[520,.06],[780,.08]],join:[[660,.08],[880,.12]],go:[[392,.1],[523,.1],[659,.1],[784,.25]],ok:[[523,.1],[659,.1],[784,.25]],no:[[260,.15],[196,.3]],end:[[523,.15],[659,.15],[784,.15],[1047,.4]]};
+function sfx(k){
+  if(mute)return;
+  try{
+    AC=AC||new AudioContext();AC.resume();
+    let t=AC.currentTime;
+    NOTES[k].forEach(([f,d])=>{
+      const o=AC.createOscillator(),g=AC.createGain();
+      o.type=k=="no"?"sawtooth":"triangle";o.frequency.value=f;
+      g.gain.setValueAtTime(.15,t);g.gain.exponentialRampToValueAtTime(.001,t+d);
+      o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d);t+=d*.9;
+    });
+  }catch(e){}
+}
+addEventListener("pointerdown",e=>{try{AC=AC||new AudioContext();AC.resume()}catch(x){}if(e.target.closest("button")&&e.target.id!="mute")sfx("click")});
+
+/* shared countdown: updates #tm, ticks (host only), calls end at 0 */
+function clock(t,end,snd){
+  clearInterval(tk);
+  const t0=Date.now();let last=t;
+  tk=setInterval(()=>{
+    const l=Math.max(0,Math.ceil(t-(Date.now()-t0)/1000)),e=$("#tm");
+    if(e){e.textContent=l;e.classList.toggle("hot",l<=5)}
+    if(l!=last){last=l;if(snd&&l<=5&&l>0)sfx("tick")}
+    if(!l){clearInterval(tk);end&&end()}
+  },200);
+}
 
 /* ---------- library ---------- */
 function home(){
@@ -86,35 +144,75 @@ function home(){
   $("#lib").innerHTML=load().filter(x=>x.title.toLowerCase().includes(f)).map(x=>
     `<div class="card row"><div style="flex:1"><b>${esc(x.title)}</b><br><small>${x.qs.length} questions</small></div>
     <button class="g" onclick="hostGame('${x.id}')">Host</button>
-    <button onclick="edit('${x.id}')">Edit</button>
-    <button class="r" onclick="del('${x.id}')">Delete</button></div>`).join("")
-    ||"<p>No quizzes found. Create one with “New quiz”.</p>";
+    <button class="s" onclick="edit('${x.id}')">Edit</button>
+    <button class="s" onclick="share('${x.id}')">Share link</button>
+    <button class="s" onclick="exp('${x.id}')">Export</button>
+    <button class="r s" onclick="del('${x.id}')">Delete</button></div>`).join("")
+    ||"<p>No quizzes found. Make one with “New quiz” or import one.</p>";
 }
 function del(id){if(confirm("Delete this quiz?")){save(load().filter(x=>x.id!=id));home()}}
+
+/* ---------- export / import / share ---------- */
+function exp(id){
+  const g=load().find(x=>x.id==id),a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([JSON.stringify({quizzy:1,...g})],{type:"application/json"}));
+  a.download=(g.title.replace(/[^\w-]+/g,"_")||"quiz")+".quizzy.json";
+  a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function clean(o){
+  if(!o||!Array.isArray(o.qs)||!o.qs.length)throw 0;
+  return{id:""+Date.now()+Math.floor(Math.random()*1e3),title:String(o.title||"Imported quiz").slice(0,80),
+    qs:o.qs.slice(0,100).map(q=>({
+      q:String(q.q||"").slice(0,200),
+      img:/^data:image\//.test(q.img)?q.img:"",
+      a:[0,1,2,3].map(i=>String(q.a?.[i]||"").slice(0,100)),
+      ok:(x=>x.length?x:[0])([...new Set((Array.isArray(q.ok)?q.ok:[q.ok]).map(Number).filter(x=>x>=0&&x<4))]),
+      time:[10,20,30,60].includes(+q.time)?+q.time:20}))};
+}
+function add(o){
+  try{
+    const q=clean(o);
+    if(confirm("Add the quiz “"+q.title+"” ("+q.qs.length+" questions)?")){const g=load();g.push(q);if(save(g))home()}
+  }catch(e){alert("That is not a valid Quizzy quiz.")}
+}
+function imp(f){if(f)f.text().then(t=>add(JSON.parse(t))).catch(()=>alert("That is not a valid Quizzy quiz."))}
+function share(id){
+  const g=load().find(x=>x.id==id),o={title:g.title,qs:g.qs.map(q=>({...q,img:""}))},
+  u=location.href.split(/[?#]/)[0]+"#import="+btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+  (navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(
+    ()=>alert("Link copied. It carries the questions and answers. To include images, send an exported file instead."),
+    ()=>prompt("Copy this link:",u));
+}
 
 /* ---------- editor ---------- */
 function edit(id){
   cur=id?JSON.parse(JSON.stringify(load().find(x=>x.id==id))):{id:""+Date.now(),title:"",qs:[blank()]};
-  show("edit");ed();
+  fq=undefined;show("edit");ed();
 }
 function ed(){
   $("#t").value=cur.title;
-  $("#qs").innerHTML=cur.qs.map((q,i)=>`<div class="card">
+  $("#qs").innerHTML=cur.qs.map((q,i)=>`<div class="card" onpointerdown="fq=${i}" onfocusin="fq=${i}">
     <div class="row"><b>${i+1}</b>
       <input placeholder="Question" value="${esc(q.q)}" oninput="cur.qs[${i}].q=this.value">
       <select onchange="cur.qs[${i}].time=+this.value">${[10,20,30,60].map(t=>`<option value="${t}" ${t==q.time?"selected":""}>${t}s</option>`).join("")}</select>
       <button class="r" onclick="cur.qs.splice(${i},1);ed()" aria-label="Delete question">✕</button></div>
     <div class="row" style="margin:8px 0">
-      ${q.img?`<img src="${q.img}" alt="" style="height:70px;border-radius:6px"><button class="o" onclick="cur.qs[${i}].img='';ed()">Remove image</button>`:""}
-      <input type="file" accept="image/*" onchange="pic(${i},this.files[0])"></div>
-    <div class="grid">${q.a.map((a,j)=>`<label class="row c${j}" style="padding:6px;border-radius:8px;flex-wrap:nowrap">
-      <input type="radio" name="r${i}" title="Correct answer" ${q.ok==j?"checked":""} onchange="cur.qs[${i}].ok=${j}">
-      <input placeholder="Answer ${j+1}" value="${esc(a)}" oninput="cur.qs[${i}].a[${j}]=this.value"></label>`).join("")}</div>
+      ${q.img?`<img src="${esc(q.img)}" alt="" style="height:70px;border-radius:8px"><button class="o s" onclick="cur.qs[${i}].img='';ed()">Remove image</button>`:""}
+      <input type="file" accept="image/*" onchange="pic(${i},this.files[0])"><small>or paste with Ctrl+V</small>
+      <span class="badge" id="mb${i}" ${q.ok.length>1?"":"hidden"}>select all that apply</span></div>
+    <div class="grid">${q.a.map((a,j)=>`<label class="at c${j}">
+      <input type="checkbox" title="Correct answer" ${q.ok.includes(j)?"checked":""} onchange="tog(${i},${j},this.checked)">
+      <input placeholder="Answer ${LT[j]}" value="${esc(a)}" oninput="cur.qs[${i}].a[${j}]=this.value"></label>`).join("")}</div>
   </div>`).join("");
+}
+function tog(i,j,on){
+  const q=cur.qs[i];
+  q.ok=on?[...new Set([...q.ok,j])]:q.ok.filter(x=>x!=j);
+  $("#mb"+i).hidden=q.ok.length<2;
 }
 function addQ(){cur.qs.push(blank());ed();scrollTo(0,document.body.scrollHeight)}
 function pic(i,f){
-  if(!f)return;
+  if(!f||!cur.qs[i])return;
   const r=new FileReader();
   r.onload=()=>{const im=new Image();
     im.onload=()=>{const s=Math.min(1,480/im.width),c=document.createElement("canvas");
@@ -123,19 +221,27 @@ function pic(i,f){
     im.src=r.result};
   r.readAsDataURL(f);
 }
+addEventListener("paste",e=>{
+  if($("#edit").hidden)return;
+  const it=[...e.clipboardData.items].find(x=>x.type.startsWith("image/"));
+  if(it){e.preventDefault();pic(fq??cur.qs.length-1,it.getAsFile())}
+});
 function saveQ(){
   if(!cur.title.trim())return alert("Give your quiz a title.");
   if(!cur.qs.length)return alert("Add at least one question.");
   for(const [i,q] of cur.qs.entries())
-    if(!q.q.trim()||q.a.filter(x=>x.trim()).length<2||!q.a[q.ok].trim())
-      return alert("Question "+(i+1)+" needs text, at least 2 answers, and a filled-in correct answer (the round button).");
+    if(!q.q.trim()||q.a.filter(x=>x.trim()).length<2||!q.ok.length||q.ok.some(j=>!q.a[j].trim()))
+      return alert("Question "+(i+1)+" needs text, at least 2 answers, and every ticked answer filled in.");
   const g=load(),k=g.findIndex(x=>x.id==cur.id);
   k<0?g.push(cur):g[k]=cur;
   if(save(g))home();
 }
 
 /* ---------- host (runs on this device) ---------- */
-function hostGame(id){H={g:load().find(x=>x.id==id),i:-1};players={};mk(0)}
+function hostGame(id){
+  H={g:load().find(x=>x.id==id),i:-1,cfg:{shuf:0,speed:1,lb:1,time:0}};
+  players={};mk(0);
+}
 function mk(n){
   const code=""+(100000+Math.floor(Math.random()*900000));
   H.code=code;peer=new Peer("kqz-"+code);
@@ -152,17 +258,24 @@ function mk(n){
 function lobby(){
   H.st="lobby";show("host");
   const u=location.href.split(/[?#]/)[0]+"?code="+H.code;
-  $("#host").innerHTML=`<h2>Join with this code</h2><div class="code">${H.code}</div>
-  <p>Open <b>${esc(u)}</b> or go to this page and type the code.</p>
+  $("#host").innerHTML=`<h2>${esc(H.g.title)}</h2><p>Join with this code</p><div class="code">${H.code}</div>
+  <p><small>${esc(u)}</small></p>
   <div id="pl"></div>
-  <div class="row" style="justify-content:center;margin-top:12px"><button class="g" id="go" onclick="nextQ()">Start</button><button class="o" onclick="endHost()">Cancel</button></div>
+  <div class="card" style="text-align:left"><b>Game settings</b>
+    <label class="row"><input type="checkbox" onchange="H.cfg.shuf=+this.checked"> Shuffle question order</label>
+    <label class="row"><input type="checkbox" checked onchange="H.cfg.speed=+this.checked"> Faster answers earn more points</label>
+    <label class="row"><input type="checkbox" checked onchange="H.cfg.lb=+this.checked"> Show leaderboard after each question</label>
+    <label class="row">Time per question
+      <select style="width:auto" onchange="H.cfg.time=+this.value"><option value="0">As set in the quiz</option>${[10,20,30,60].map(t=>`<option value="${t}">${t} seconds for all</option>`).join("")}</select></label>
+  </div>
+  <div class="row" style="justify-content:center"><button class="g" id="go" onclick="nextQ()">Start game</button><button class="o" onclick="endHost()">Cancel</button></div>
   <p><small>Keep this tab open while people play.</small></p>`;
   lobbyUpd();
 }
 function lobbyUpd(){
   const l=$("#pl");if(!l||H.st!="lobby")return;
   const a=live();
-  l.innerHTML=a.map(p=>`<span class="chip">${esc(p.name)}</span>`).join("")||"Waiting for players…";
+  l.innerHTML=a.map(p=>`<span class="chip">${esc(p.name)}</span>`).join("")||"<p>Waiting for players…</p>";
   $("#go").disabled=!a.length;
 }
 function onMsg(c,m){
@@ -171,18 +284,21 @@ function onMsg(c,m){
     let n=(m.name+"").slice(0,16),b=n,k=2;
     while(Object.values(players).some(p=>p.name==n))n=b+" "+k++;
     players[c.peer]={name:n,score:0,c,ans:null};
-    c.send({t:"in",name:n});lobbyUpd();
+    c.send({t:"in",name:n});sfx("join");lobbyUpd();
   }else if(m.t=="ans"){
-    const p=players[c.peer];
-    if(H.st=="q"&&p&&p.ans==null&&m.a>=0&&m.a<4){
-      p.ans=m.a;p.ms=Date.now()-H.t0;cnt();
+    const p=players[c.peer],a=Array.isArray(m.a)?[...new Set(m.a.filter(x=>Number.isInteger(x)&&x>=0&&x<4))]:[];
+    if(H.st=="q"&&p&&p.ans==null&&a.length){
+      p.ans=a;p.ms=Date.now()-H.t0;cnt();
       if(live().every(p=>p.ans!=null))reveal();
     }
   }
 }
-function nextQ(){H.i++;H.i>=H.g.qs.length?fin():ask()}
+function nextQ(){
+  if(H.i<0&&H.cfg.shuf)H.g.qs.sort(()=>Math.random()-.5);
+  H.i++;H.i>=H.g.qs.length?fin():ask();
+}
 function opts(q,c){
-  return q.a.map((t,j)=>t.trim()?`<div class="opt c${j}" style="${c&&j!=q.ok?"opacity:.35":""}"><span>${SH[j]}</span><span>${esc(t)}</span>${c?`<b style="margin-left:auto">${c[j]}</b>`:""}</div>`:"").join("");
+  return q.a.map((t,j)=>t.trim()?`<div class="opt c${j}" style="animation-delay:${j*.07}s;${c&&!q.ok.includes(j)?"opacity:.35":""}"><span class="l">${LT[j]}</span><span>${c&&q.ok.includes(j)?"✓ ":""}${esc(t)}</span>${c?`<b style="margin-left:auto">${c[j]}</b>`:""}</div>`:"").join("");
 }
 function cnt(){
   const e=$("#cnt");
@@ -190,43 +306,39 @@ function cnt(){
 }
 function ask(){
   H.st="q";
-  const q=H.g.qs[H.i],n=H.g.qs.length;
-  Object.values(players).forEach(p=>p.ans=null);
-  H.t0=Date.now();
-  bc({t:"q",i:H.i,n,q:q.q,a:q.a});
-  $("#host").innerHTML=`<p>Question ${H.i+1} of ${n}</p><h2>${esc(q.q)}</h2>
-  ${q.img?`<img src="${q.img}" alt="" style="max-width:100%;max-height:38vh;border-radius:10px">`:""}
-  <div class="row" style="justify-content:space-between"><h1 id="tm">${q.time}</h1><span id="cnt"></span><button class="o" onclick="reveal()">Skip</button></div>
+  const q=H.g.qs[H.i],n=H.g.qs.length,t=H.cfg.time||q.time,mu=q.ok.length>1;
+  H.t=t;Object.values(players).forEach(p=>p.ans=null);H.t0=Date.now();
+  bc({t:"q",i:H.i,n,q:q.q,a:q.a,time:t,multi:mu});sfx("go");
+  $("#host").innerHTML=`<div class="bar"><i style="animation-duration:${t}s"></i></div>
+  <p>Question ${H.i+1} of ${n} ${mu?'<span class="badge">select all that apply</span>':""}</p><h2>${esc(q.q)}</h2>
+  ${q.img?`<img src="${esc(q.img)}" alt="" style="max-width:100%;max-height:34vh;border-radius:14px">`:""}
+  <div class="row" style="justify-content:space-between"><h1 id="tm">${t}</h1><span id="cnt"></span><button class="o" onclick="reveal()">Skip</button></div>
   <div class="grid">${opts(q)}</div>`;
-  clearInterval(H.tick);
-  H.tick=setInterval(()=>{
-    const l=Math.ceil(q.time-(Date.now()-H.t0)/1000);
-    $("#tm").textContent=Math.max(l,0);
-    if(l<=0)reveal();
-  },250);
-  cnt();
+  clock(t,reveal,1);cnt();
 }
 function reveal(){
   if(H.st!="q")return;
-  H.st="r";clearInterval(H.tick);
+  H.st="r";clearInterval(tk);sfx("pop");
   const q=H.g.qs[H.i],c=[0,0,0,0];
   Object.values(players).forEach(p=>{
-    p.d=0;p.ok=p.ans===q.ok;
-    if(p.ans!=null)c[p.ans]++;
-    if(p.ok){p.d=Math.max(100,Math.round(1000*(1-p.ms/1000/q.time/2)));p.score+=p.d}
+    const s=p.ans||[];
+    p.d=0;p.ok=s.length==q.ok.length&&q.ok.every(x=>s.includes(x));
+    s.forEach(x=>c[x]++);
+    if(p.ok){p.d=H.cfg.speed?Math.max(100,Math.round(1000*(1-p.ms/1000/H.t/2))):1000;p.score+=p.d}
   });
   const r=rank();
   r.forEach((p,i)=>p.c.open&&p.c.send({t:"r",ok:p.ok,got:p.ans!=null,d:p.d,s:p.score,r:i+1,n:r.length}));
-  $("#host").innerHTML=`<h2>${esc(q.q)}</h2><div class="grid">${opts(q,c)}</div><h2>Leaderboard</h2>${board(5)}
-  <button class="g" onclick="nextQ()">${H.i+1<H.g.qs.length?"Next question":"Finish"}</button>`;
+  $("#host").innerHTML=`<h2>${esc(q.q)}</h2><div class="grid">${opts(q,c)}</div>
+  ${H.cfg.lb?"<h2>Leaderboard</h2>"+board(5):""}
+  <p><button class="g" onclick="nextQ()">${H.i+1<H.g.qs.length?"Next question":"Finish"}</button></p>`;
 }
 function fin(){
-  H.st="end";
+  H.st="end";sfx("end");
   const r=rank();
   r.forEach((p,i)=>p.c.open&&p.c.send({t:"end",s:p.score,r:i+1,n:r.length}));
   $("#host").innerHTML=`<h1>Final results</h1>${board(5)}<button class="g" onclick="endHost()">Done</button>`;
 }
-function endHost(){H&&clearInterval(H.tick);peer&&peer.destroy();peer=0;home()}
+function endHost(){clearInterval(tk);peer&&peer.destroy();peer=0;home()}
 
 /* ---------- player ---------- */
 function join(){
@@ -246,18 +358,42 @@ function join(){
 }
 function pmsg(m){
   if(m.t=="no"){leave();$("#jmsg").textContent=m.why}
-  else if(m.t=="in")pscr(`<h2>You’re in, ${esc(m.name)}!</h2><p>Watch the host screen…</p>`);
-  else if(m.t=="q")pscr(`<p>Question ${m.i+1} of ${m.n}</p><h3>${esc(m.q)}</h3><div class="grid">${m.a.map((t,j)=>t.trim()?`<button class="opt c${j}" onclick="ans(${j})"><span>${SH[j]}</span><span>${esc(t)}</span></button>`:"").join("")}</div>`);
-  else if(m.t=="r")pscr(`<h1>${m.ok?"✔ Correct!":m.got?"✘ Wrong":"⏱ Too slow"}</h1><h2>+${m.d} points</h2><p>${m.s} total · place ${m.r} of ${m.n}</p>`);
-  else if(m.t=="end"){over=1;pscr(`<h1>Game over</h1><h2>Place ${m.r} of ${m.n}</h2><p>${m.s} points</p><button onclick="leave()">Home</button>`)}
+  else if(m.t=="in"){sfx("join");pscr(`<h2>You’re in, ${esc(m.name)}!</h2><p>Watch the host screen…</p>`)}
+  else if(m.t=="q"){
+    pick=[];multi=m.multi;sfx("pop");
+    pscr(`<div class="bar"><i style="animation-duration:${m.time}s"></i></div><p>Question ${m.i+1} of ${m.n}</p><h1 id="tm">${m.time}</h1><h3>${esc(m.q)}</h3>
+    ${m.multi?'<p><span class="badge">select all that apply</span></p>':""}
+    <div class="grid">${m.a.map((t,j)=>t.trim()?`<button class="opt c${j}" id="o${j}" style="animation-delay:${j*.07}s" onclick="tap(${j})"><span class="l">${LT[j]}</span><span>${esc(t)}</span></button>`:"").join("")}</div>
+    ${m.multi?'<p><button class="g" onclick="submit()">Submit answer</button></p>':""}`);
+    clock(m.time);
+  }else if(m.t=="r"){
+    clearInterval(tk);sfx(m.ok?"ok":"no");
+    pscr(`<div class="${m.ok?"good":"bad"}"><div style="font-size:5rem;animation:${m.ok?"bounce":"shake"} .6s">${m.ok?"🎉":m.got?"💥":"⏰"}</div>
+    <h1>${m.ok?"Correct!":m.got?"Not quite":"Too slow"}</h1><h2>+${m.d} points</h2><p>${m.s} total · place ${m.r} of ${m.n}</p></div>`);
+  }else if(m.t=="end"){
+    over=1;clearInterval(tk);sfx("end");
+    pscr(`<h1>Game over</h1><h2>Place ${m.r} of ${m.n}</h2><p>${m.s} points</p><button onclick="leave()">Home</button>`);
+  }
 }
-function ans(j){pc.send({t:"ans",a:j});pscr("<h2>Answer sent!</h2><p>Waiting for the others…</p>")}
-function leave(){over=1;peer&&peer.destroy();peer=0;home()}
+function send(a){pc.send({t:"ans",a});clearInterval(tk);pscr("<h2>Answer sent!</h2><p>Waiting for the others…</p>")}
+function tap(j){
+  if(!multi)return send([j]);
+  const i=pick.indexOf(j);
+  i<0?pick.push(j):pick.splice(i,1);
+  $("#o"+j).classList.toggle("sel");
+}
+function submit(){if(pick.length)send(pick)}
+function leave(){over=1;clearInterval(tk);peer&&peer.destroy();peer=0;home()}
 
 /* ---------- start ---------- */
 const m=location.search.match(/code=(\d+)/);
 if(m)$("#code").value=m[1];
 home();
+const h=location.hash.match(/^#import=(.+)/);
+if(h){
+  history.replaceState(0,"",location.pathname+location.search);
+  try{add(JSON.parse(decodeURIComponent(escape(atob(h[1])))))}catch(e){alert("That share link is broken.")}
+}
 </script>
 </body>
 </html>
