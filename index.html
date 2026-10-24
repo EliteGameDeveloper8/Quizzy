@@ -77,8 +77,8 @@ main{padding:52px 16px 76px}
 </head>
 <body>
 <button id="mm" class="o s" onclick="togMm()" title="Music on/off" aria-label="Music on/off"></button>
-<button id="mute" class="o s" onclick="mute=!mute;localStorage.setItem('qz_mute',mute?1:0);this.textContent=mute?'🔇':'🔊'" title="Sound effects on/off" aria-label="Sound effects on/off"></button>
-<button id="lg" class="o s" onclick="setLang(lang=='ro'?'en':'ro')" title="Language" aria-label="Language"></button>
+<button id="mute" class="o s" onclick="mute=!mute;LS.setItem('qz_mute',mute?1:0);this.textContent=mute?'🔇':'🔊'" title="Sound effects on/off" aria-label="Sound effects on/off"></button>
+<button id="lg" class="o s" onclick="togLang()" title="Language" aria-label="Language"></button>
 <div id="emo" hidden></div>
 <main>
 <section id="menu" class="mid">
@@ -130,11 +130,12 @@ main{padding:52px 16px 76px}
 </main>
 
 <script>
+const LS=(()=>{try{const t=window.localStorage;t.getItem("q");return t}catch(e){const m={};return{getItem:k=>k in m?m[k]:null,setItem:(k,v)=>{m[k]=String(v)},removeItem:k=>{delete m[k]}}}})();
 const $=s=>document.querySelector(s),
 esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]),
 LT="ABCDEFGH",KEY="quizzy_games",
-load=()=>{try{const g=JSON.parse(localStorage.getItem(KEY))||[];g.forEach(x=>x.qs.forEach(q=>{if(!Array.isArray(q.ok))q.ok=[q.ok|0];q.mode=q.mode||(q.ok.length>1?"all":"any")}));return g}catch(e){return[]}},
-save=g=>{try{localStorage.setItem(KEY,JSON.stringify(g));return 1}catch(e){alert("Browser storage is full. Use fewer or smaller images.")}},
+load=()=>{try{const g=JSON.parse(LS.getItem(KEY))||[];g.forEach(x=>x.qs.forEach(q=>{if(!Array.isArray(q.ok))q.ok=[q.ok|0];q.mode=q.mode||(q.ok.length>1?"all":"any")}));return g}catch(e){return[]}},
+save=g=>{try{LS.setItem(KEY,JSON.stringify(g));return 1}catch(e){alert("Browser storage is full. Use fewer or smaller images.")}},
 show=v=>{["menu","join","quizzes","edit","host","play"].forEach(x=>$("#"+x).hidden=x!=v);$("#emo").hidden=1},
 blank=()=>({q:"",img:"",type:"choice",a:["","","",""],ok:[0],txt:"",tol:1,cs:0,mode:"any",time:20}),
 live=()=>Object.values(players).filter(p=>p.c.open),
@@ -142,16 +143,16 @@ bc=m=>live().forEach(p=>p.c.send(m)),
 rank=()=>Object.values(players).sort((a,b)=>b.score-a.score),
 board=(n,f=0)=>rows(lb(n),f)||"<p>No players</p>",
 pscr=h=>{show("play");$("#play").innerHTML=h;$("#emo").hidden=!(emoOn&&!over&&pc&&pc.open)};
-let cur,peer,H,pc,over,fq,tk,pick=[],multi,AC,players={},mute=localStorage.getItem("qz_mute")=="1";
+let cur,peer,H,pc,over,fq,tk,pick=[],multi,AC,players={},mute=LS.getItem("qz_mute")=="1";
 $("#mute").textContent=mute?"🔇":"🔊";
 const EM=["🐱","🐶","🦊","🐼","🐸","🦄","🐙","🐵","🦁","🐯","🐧","🐳","🐲","🤖","👻","🚀"],
 norm=(s,cs)=>{s=String(s).trim().replace(/\s+/g," ");return cs?s:s.toLowerCase()},
 acc=q=>(q.txt||"").split(",").map(x=>norm(x,q.cs)).filter(Boolean),
 lev=(a,b)=>{let p=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;i++){const c=[i];for(let j=1;j<=b.length;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]==b[j-1]?0:1));p=c}return p[b.length]};
-let mm=localStorage.getItem("qz_mm")=="1",em=localStorage.getItem("qz_em")||EM[0],mw=0,mi,bt=0;
-let mst=localStorage.getItem("qz_mus")||"upbeat",X,NB;
+let mm=LS.getItem("qz_mm")=="1",em=LS.getItem("qz_em")||EM[0],mw=0,mi,bt=0;
+let mst=LS.getItem("qz_mus")||"upbeat",X,NB;
 const mmUi=()=>{$("#mm").textContent=mm?"🎵 ✕":"🎵"},
-togMm=()=>{mm=!mm;localStorage.setItem("qz_mm",mm?1:0);mmUi();music(mw)},
+togMm=()=>{mm=!mm;LS.setItem("qz_mm",mm?1:0);mmUi();music(mw)},
 hz=n=>440*2**((n-69)/12),rnd=n=>Math.floor(Math.random()*n),pk=a=>a[rnd(a.length)],
 CT={M:[0,4,7],m:[0,3,7],M7:[0,4,7,11],m7:[0,3,7,10],"7":[0,4,7,10]},ARR=[1,2,3,3,2,3,3,1],
 MO=[["upbeat","Upbeat"],["chill","Chill"],["arcade","Arcade"],["off","No music"]],
@@ -249,8 +250,8 @@ function music(on){
     mi=setInterval(mtick,100);
   }catch(e){X=0}
 }
-function setMus(v){mst=v;H.cfg.mus=v;localStorage.setItem("qz_mus",v);bc({t:"mus",v});music(mw)}
-function emUi(){$("#ems").innerHTML=EM.map(e=>`<button class="em ${e==em?"on":""}" onclick="em='${e}';localStorage.setItem('qz_em',em);emUi()">${e}</button>`).join("")}
+function setMus(v){mst=v;H.cfg.mus=v;LS.setItem("qz_mus",v);bc({t:"mus",v});music(mw)}
+function emUi(){$("#ems").innerHTML=EM.map(e=>`<button class="em ${e==em?"on":""}" onclick="em='${e}';LS.setItem('qz_em',em);emUi()">${e}</button>`).join("")}
 emUi();
 function rows(l,f=0){return l.slice(f).map((p,i)=>`<div class="card row" style="animation:rise .4s ${i*.1}s backwards"><b>${i+f+1}</b><span style="font-size:1.6rem">${p.e}</span><span style="flex:1;text-align:left">${esc(p.n)}</span><b>${p.s}</b></div>`).join("")}
 function lb(n){return rank().slice(0,n).map(p=>({n:p.name,e:p.e,s:p.score}))}
@@ -311,5 +312,4 @@ function clean(o){
   if(!o||!Array.isArray(o.qs)||!o.qs.length)throw 0;
   return{id:""+Date.now()+Math.floor(Math.random()*1e3),title:String(o.title||"Imported quiz").slice(0,80),
     qs:o.qs.slice(0,100).map(q=>{
-      const a=(Array.isArray(q.a)?q.a:[]).slice(0,8).map(x=>String(x||"").slice(0,100));
-      w
+      const a=(Array.is
