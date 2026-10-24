@@ -59,24 +59,51 @@ input[type=number]{width:76px}
 .pc{display:flex;flex-direction:column;align-items:center;flex:1;max-width:160px}
 .pb{width:100%;border-radius:12px 12px 0 0;display:grid;place-items:center;font-size:2rem;font-weight:900;color:var(--ink);transform-origin:bottom}
 @keyframes grow{from{transform:scaleY(0)}}
+main{padding:52px 16px 76px}
+#lg{position:fixed;top:8px;right:8px;z-index:9;padding:6px 10px}#mute{right:62px}#mm{right:116px}
+#emo{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:6px;padding:8px;background:rgba(6,20,40,.88);z-index:8}
+#emo button{font-size:1.7rem}
+.fl{position:fixed;bottom:70px;z-index:20;font-size:2.6rem;pointer-events:none;text-align:center;animation:fly 2.5s ease-out forwards}
+.fl small{display:block;font-size:.8rem;font-weight:800}
+@keyframes fly{to{transform:translateY(-60vh);opacity:0}}
+.qrb{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:zoom-in}
+.qrb svg{width:168px;height:168px;border-radius:12px;display:block}
+.qrb .qc{display:none;font-size:2.4rem;font-weight:900;color:var(--b)}
+.qrb.big{position:fixed;inset:0;z-index:30;justify-content:center;background:rgba(6,20,40,.96);cursor:zoom-out}
+.qrb.big svg{width:min(88vw,70vh);height:min(88vw,70vh)}
+.qrb.big .qc{display:block}
+#lg svg{display:block;height:16px;width:auto;border-radius:2px}
 </style>
 </head>
 <body>
-<button id="mm" class="o s" onclick="mm=!mm;localStorage.setItem('qz_mm',mm?1:0);this.textContent=mm?'🎵 off':'🎵';music(mw)" aria-label="Toggle music"></button>
-<button id="mute" class="o s" onclick="mute=!mute;localStorage.setItem('qz_mute',mute?1:0);this.textContent=mute?'🔇':'🔊'" aria-label="Toggle sound effects"></button>
+<button id="mm" class="o s" onclick="togMm()" title="Music on/off" aria-label="Music on/off"></button>
+<button id="mute" class="o s" onclick="mute=!mute;localStorage.setItem('qz_mute',mute?1:0);this.textContent=mute?'🔇':'🔊'" title="Sound effects on/off" aria-label="Sound effects on/off"></button>
+<button id="lg" class="o s" onclick="setLang(lang=='ro'?'en':'ro')" title="Language" aria-label="Language"></button>
+<div id="emo" hidden></div>
 <main>
-<section id="home">
+<section id="menu" class="mid">
   <h1 class="logo">Quizzy</h1>
-  <div class="card">
-    <h2>Join a game</h2><p><small>Pick your character</small></p><div id="ems" class="row" style="margin-bottom:8px"></div>
-    <div class="row">
-      <input id="code" placeholder="Game code" inputmode="numeric">
-      <input id="nick" placeholder="Nickname" maxlength="16">
-      <button class="g" onclick="join()">Join</button>
-    </div>
-    <small id="jmsg"></small>
+  <p>Play quizzes with friends, hosted from your own device</p>
+  <div class="grid" style="max-width:560px;margin:28px auto">
+    <button class="opt c1" style="justify-content:center;min-height:120px" onclick="show('join')"><span style="font-size:2rem">🎮</span><span>Join a game</span></button>
+    <button class="opt c2" style="justify-content:center;min-height:120px" onclick="home()"><span style="font-size:2rem">✏️</span><span>Create quiz</span></button>
   </div>
+</section>
+
+<section id="join" hidden>
+  <button class="o" onclick="menu()">← Back</button>
+  <div class="card">
+    <h2>Join a game</h2>
+    <div class="row"><input id="code" placeholder="Game code" inputmode="numeric"><input id="nick" placeholder="Nickname" maxlength="16"></div>
+    <p><small>Pick your character</small></p>
+    <div id="ems" class="row" style="margin-bottom:8px"></div>
+    <button class="g" onclick="join()">Join</button> <small id="jmsg"></small>
+  </div>
+</section>
+
+<section id="quizzes" hidden>
   <div class="row">
+    <button class="o" onclick="menu()">← Back</button>
     <h2 style="flex:1">My quizzes</h2>
     <input id="find" placeholder="Search…" oninput="home()" style="width:140px;flex:none">
     <button class="g" onclick="edit()">+ New quiz</button>
@@ -92,7 +119,7 @@ input[type=number]{width:76px}
     <button class="g" onclick="saveQ()">Save</button>
     <button class="o" onclick="home()">Cancel</button>
   </div>
-  <p><small>Tick every correct answer; the label on each question shows whether it has one right answer or several. Press Ctrl+V to paste an image into the selected question.</small></p>
+  <p><small>Tick every correct answer. With 2 or more ticked, choose whether any one of them is right or all must be selected. Press Ctrl+V to paste an image into the selected question.</small></p>
   <div id="qs"></div>
   <button onclick="addQ()">+ Add question</button>
 </section>
@@ -105,35 +132,123 @@ input[type=number]{width:76px}
 const $=s=>document.querySelector(s),
 esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]),
 LT="ABCDEFGH",KEY="quizzy_games",
-load=()=>{try{const g=JSON.parse(localStorage.getItem(KEY))||[];g.forEach(x=>x.qs.forEach(q=>{if(!Array.isArray(q.ok))q.ok=[q.ok|0]}));return g}catch(e){return[]}},
+load=()=>{try{const g=JSON.parse(localStorage.getItem(KEY))||[];g.forEach(x=>x.qs.forEach(q=>{if(!Array.isArray(q.ok))q.ok=[q.ok|0];q.mode=q.mode||(q.ok.length>1?"all":"any")}));return g}catch(e){return[]}},
 save=g=>{try{localStorage.setItem(KEY,JSON.stringify(g));return 1}catch(e){alert("Browser storage is full. Use fewer or smaller images.")}},
-show=v=>["home","edit","host","play"].forEach(x=>$("#"+x).hidden=x!=v),
-blank=()=>({q:"",img:"",type:"choice",a:["","","",""],ok:[0],txt:"",tol:1,time:20}),
+show=v=>{["menu","join","quizzes","edit","host","play"].forEach(x=>$("#"+x).hidden=x!=v);$("#emo").hidden=1},
+blank=()=>({q:"",img:"",type:"choice",a:["","","",""],ok:[0],txt:"",tol:1,cs:0,mode:"any",time:20}),
 live=()=>Object.values(players).filter(p=>p.c.open),
 bc=m=>live().forEach(p=>p.c.send(m)),
 rank=()=>Object.values(players).sort((a,b)=>b.score-a.score),
 board=(n,f=0)=>rows(lb(n),f)||"<p>No players</p>",
-pscr=h=>{show("play");$("#play").innerHTML=h};
+pscr=h=>{show("play");$("#play").innerHTML=h;$("#emo").hidden=!(emoOn&&!over&&pc&&pc.open)};
 let cur,peer,H,pc,over,fq,tk,pick=[],multi,AC,players={},mute=localStorage.getItem("qz_mute")=="1";
 $("#mute").textContent=mute?"🔇":"🔊";
 const EM=["🐱","🐶","🦊","🐼","🐸","🦄","🐙","🐵","🦁","🐯","🐧","🐳","🐲","🤖","👻","🚀"],
-PAT=[0,4,7,12,7,4,0,4,5,9,12,17,12,9,5,9,7,11,14,19,14,11,7,11,0,4,7,12,7,4,2,5],
-norm=s=>String(s).toLowerCase().trim().replace(/\s+/g," "),
-acc=q=>(q.txt||"").split(",").map(norm).filter(Boolean),
+norm=(s,cs)=>{s=String(s).trim().replace(/\s+/g," ");return cs?s:s.toLowerCase()},
+acc=q=>(q.txt||"").split(",").map(x=>norm(x,q.cs)).filter(Boolean),
 lev=(a,b)=>{let p=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;i++){const c=[i];for(let j=1;j<=b.length;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]==b[j-1]?0:1));p=c}return p[b.length]};
 let mm=localStorage.getItem("qz_mm")=="1",em=localStorage.getItem("qz_em")||EM[0],mw=0,mi,bt=0;
-$("#mm").textContent=mm?"🎵 off":"🎵";
+let mst=localStorage.getItem("qz_mus")||"upbeat",X,NB;
+const mmUi=()=>{$("#mm").textContent=mm?"🎵 ✕":"🎵"},
+togMm=()=>{mm=!mm;localStorage.setItem("qz_mm",mm?1:0);mmUi();music(mw)},
+hz=n=>440*2**((n-69)/12),rnd=n=>Math.floor(Math.random()*n),pk=a=>a[rnd(a.length)],
+CT={M:[0,4,7],m:[0,3,7],M7:[0,4,7,11],m7:[0,3,7,10],"7":[0,4,7,10]},ARR=[1,2,3,3,2,3,3,1],
+MO=[["upbeat","Upbeat"],["chill","Chill"],["arcade","Arcade"],["off","No music"]],
+musSel=()=>`<select style="width:auto" title="Music" onchange="setMus(this.value)">${MO.map(([v,l])=>`<option value="${v}" ${v==mst?"selected":""}>${l}</option>`).join("")}</select>`,
+MS={
+upbeat:{bpm:122,rt:48,lo:24,sc:[0,2,4,7,9],sw:0,wet:.18,ln:[1,1,1,2,2,3,4],rp:.2,cm:"stab",lt:"triangle",bt:"triangle",bv:.5,cv:.14,ev:.45,
+ pr:[[[0,"M"],[7,"M"],[9,"m"],[5,"M"]],[[0,"M"],[9,"m"],[5,"M"],[7,"M"]],[[5,"M"],[7,"M"],[4,"m"],[9,"m"]],[[0,"M"],[5,"M"],[7,"M"],[5,"M"]]],
+ k:["x...x...x...x...","x...x...x..xx..."],s:["....x.......x..."],h:["..x...x...x...x.","x.x.x.x.x.x.x.x."],
+ b:["r.......r...f...","r..r..r.r..r..f.","r.r.r.r.r.r.r.r."],c:["..x...x...x...x.","x.....x...x....."]},
+chill:{bpm:80,rt:48,lo:12,sc:[0,2,4,7,9],sw:.5,wet:.35,ln:[2,2,3,4,4,6],rp:.4,cm:"ep",lt:"sine",bt:"sine",bv:.55,cv:.13,ev:.4,
+ pr:[[[0,"M7"],[9,"m7"],[2,"m7"],[7,"7"]],[[5,"M7"],[4,"m7"],[2,"m7"],[0,"M7"]],[[9,"m7"],[2,"m7"],[7,"7"],[0,"M7"]],[[0,"M7"],[5,"M7"],[4,"m7"],[9,"m7"]]],
+ k:["x.....x...x.....","x.......x.x....."],s:["....x.......x..."],h:["x.x.x.x.x.x.x.x.","..x...x...x...x."],
+ b:["r.......r.....f.","r.....r.r......."],c:["x.....x...x.....","x.......x.....x."]},
+arcade:{bpm:140,rt:45,lo:24,sc:[0,3,5,7,10],sw:0,wet:.12,ln:[1,1,1,1,2,2,3],rp:.1,cm:"arp",lt:"square",bt:"square",bv:.28,cv:.09,ev:.2,
+ pr:[[[0,"m"],[8,"M"],[3,"M"],[10,"M"]],[[0,"m"],[10,"M"],[8,"M"],[10,"M"]],[[5,"m"],[0,"m"],[8,"M"],[7,"m"]],[[0,"m"],[7,"m"],[8,"M"],[10,"M"]]],
+ k:["x...x...x...x...","x..xx...x..xx..."],s:["....x.......x...","....x...x...x..x"],h:["x.x.x.x.x.x.x.x.","xxxxxxxxxxxxxxxx"],
+ b:["r.r.r.r.r.r.r.r.","r.rrr.r.r.rrr.r.","r.o.r.o.r.o.r.o."],c:["xxxxxxxxxxxxxxxx"]}};
+mmUi();
+function vo(o,t,f,d,v,ty,lp){
+  const s=AC.createOscillator(),g=AC.createGain();s.type=ty;s.frequency.value=f;
+  g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+  if(lp){const q=AC.createBiquadFilter();q.type="lowpass";q.frequency.value=lp;s.connect(q);q.connect(g)}else s.connect(g);
+  g.connect(o);s.start(t);s.stop(t+d+.05);
+}
+function dr(o,k,t,v){
+  if(k=="k"){const s=AC.createOscillator(),g=AC.createGain();s.frequency.setValueAtTime(150,t);s.frequency.exponentialRampToValueAtTime(45,t+.12);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+.22);s.connect(g);g.connect(o);s.start(t);s.stop(t+.25);return}
+  if(!NB||NB.sampleRate!=AC.sampleRate){NB=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);NB.getChannelData(0).forEach((_,i,a)=>a[i]=Math.random()*2-1)}
+  const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain(),h=k=="h";
+  s.buffer=NB;f.type=h?"highpass":"bandpass";f.frequency.value=h?7500:1800;
+  g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+(h?.04:.16));
+  s.connect(f);f.connect(g);g.connect(o);s.start(t);s.stop(t+.2);
+}
+/* random 2-bar melody on a pentatonic scale; slots are eighth notes */
+function mel(S,end){
+  const n=Array(16).fill(0);let i=3+rnd(3),s=0;
+  while(s<16){const l=Math.min(pk(S.ln),16-s);if(s%4==0||Math.random()>S.rp)n[s]={i,l};s+=l;i=Math.max(0,Math.min(9,i+pk([-2,-1,-1,0,1,1,2])))}
+  let q=16;while(!n[--q]);
+  n[q].i=end?(n[q].i>=3?5:0):pk([2,3,7,8]);
+  return n;
+}
+const mut=a=>{a=a.map(x=>x&&{...x});for(let k=0;k<3;k++){const x=a[rnd(16)];if(x)x.i=Math.max(0,Math.min(9,x.i+pk([-2,-1,1,2])))}return a};
+/* one 16th-note step. Every 4 bars: new chord progression and drum/bass patterns; every 8 sections: new melody; layers come and go (ARR) */
+function mstep(){
+  const S=X.S,s=X.st%16,sp=60/S.bpm/4,t=X.t+(s%4==2?S.sw*sp:0),o=X.bus;
+  if(!s){
+    const bi=X.B++%4;
+    if(!bi){
+      const c=X.sec++%8;
+      if(!c){X.A=mel(S,0);X.Z=mel(S,1)}
+      X.lv=ARR[c];X.mu=[c%2?mut(X.A):X.A,c%2?mut(X.Z):X.Z];
+      let p;do p=pk(S.pr);while(p==X.pr&&S.pr.length>1);X.pr=p;
+      X.k=pk(S.k);X.h=pk(S.h);X.bp=pk(S.b);X.cp=pk(S.c);X.sn=pk(S.s);
+    }
+    X.bi=bi;X.ch=X.pr[bi];
+  }
+  const [r0,ty]=X.ch,rt=r0>=6?r0-12:r0,iv=CT[ty],bi=X.bi,lv=X.lv,base=S.rt+12+rt;
+  if(lv>=2){
+    if(X.k[s]=="x")dr(o,"k",t,.9);
+    if(X.sn[s]=="x")dr(o,"s",t,.4);
+    if(X.h[s]=="x")dr(o,"h",t,s%4==2?.16:.1);
+    if(bi==3&&s>=12&&S.cm!="ep")dr(o,"s",t,.12+.05*(s-12));
+  }
+  const bn=X.bp[s];
+  if(bn!=".")vo(o,t,hz(S.rt+rt+(bn=="f"?7:bn=="o"?12:0)),sp*3,S.bv,S.bt);
+  if(S.cm=="arp")vo(o,t,hz(base+12+iv[[0,1,2,1][s%4]%iv.length]),sp*1.6,S.cv,"square");
+  else if(X.cp[s]=="x")iv.forEach(x=>S.cm=="ep"?(vo(o,t,hz(base+x),1.4,S.cv,"sine"),vo(o,t,hz(base+x+12),.5,S.cv*.3,"sine")):vo(o,t,hz(base+x),.2,S.cv,"sawtooth",1300));
+  if(lv>=3&&s%2==0){
+    const x=X.mu[bi>>1][(bi&1)*8+s/2];
+    if(x){
+      const pcs=iv.map(a=>(S.rt+rt+a)%12),md=j=>S.rt+S.lo+12*Math.floor(j/5)+S.sc[j%5];
+      let i=x.i;
+      if(s%8==0)i=[i,i+1,i-1].find(j=>j>=0&&j<10&&pcs.includes(md(j)%12))??i;
+      vo(o,t,hz(md(i)),x.l*sp*2*.95,S.ev,S.lt);
+    }
+  }
+  X.st++;X.t+=sp;
+}
+function mtick(){
+  if(!X)return;
+  if(AC.state=="suspended")AC.resume();
+  if(X.t<AC.currentTime-.5)X.t=AC.currentTime+.05;
+  while(X.t<AC.currentTime+.6)mstep();
+}
 function music(on){
   mw=on;clearInterval(mi);mi=0;
-  if(!on||mm)return;
-  mi=setInterval(()=>{try{
-    AC=AC||new AudioContext();
-    const t=AC.currentTime,o=AC.createOscillator(),g=AC.createGain(),n=PAT[bt++%PAT.length];
-    o.type="triangle";o.frequency.value=220*2**(n/12);
-    g.gain.setValueAtTime(.05,t);g.gain.exponentialRampToValueAtTime(.001,t+.2);
-    o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+.2);
-  }catch(e){}},200);
+  if(X){const x=X;X=0;x.out.gain.cancelScheduledValues(0);x.out.gain.setTargetAtTime(0,AC.currentTime,.08);setTimeout(()=>x.out.disconnect(),700)}
+  if(!on||mm||!MS[mst])return;
+  try{
+    AC=AC||new AudioContext();AC.resume();
+    const S=MS[mst],out=AC.createGain(),bus=AC.createGain(),dl=AC.createDelay(1),fb=AC.createGain(),wt=AC.createGain(),n=AC.currentTime;
+    out.gain.setValueAtTime(0,n);out.gain.linearRampToValueAtTime(.2,n+.5);
+    dl.delayTime.value=60/S.bpm*.75;fb.gain.value=.3;wt.gain.value=S.wet;
+    bus.connect(out);bus.connect(dl);dl.connect(fb);fb.connect(dl);dl.connect(wt);wt.connect(out);out.connect(AC.destination);
+    X={S,out,bus,t:n+.1,st:0,B:0,sec:2,pr:0,A:mel(S,0),Z:mel(S,1)};
+    mi=setInterval(mtick,100);
+  }catch(e){X=0}
 }
+function setMus(v){mst=v;H.cfg.mus=v;localStorage.setItem("qz_mus",v);bc({t:"mus",v});music(mw)}
 function emUi(){$("#ems").innerHTML=EM.map(e=>`<button class="em ${e==em?"on":""}" onclick="em='${e}';localStorage.setItem('qz_em',em);emUi()">${e}</button>`).join("")}
 emUi();
 function rows(l,f=0){return l.slice(f).map((p,i)=>`<div class="card row" style="animation:rise .4s ${i*.1}s backwards"><b>${i+f+1}</b><span style="font-size:1.6rem">${p.e}</span><span style="flex:1;text-align:left">${esc(p.n)}</span><b>${p.s}</b></div>`).join("")}
@@ -171,7 +286,7 @@ function clock(t,end,snd){
 
 /* ---------- library ---------- */
 function home(){
-  show("home");music(0);
+  show("quizzes");music(0);
   const f=$("#find").value.toLowerCase();
   $("#lib").innerHTML=load().filter(x=>x.title.toLowerCase().includes(f)).map(x=>
     `<div class="card row"><div style="flex:1"><b>${esc(x.title)}</b><br><small>${x.qs.length} questions</small></div>
@@ -197,260 +312,5 @@ function clean(o){
     qs:o.qs.slice(0,100).map(q=>{
       const a=(Array.isArray(q.a)?q.a:[]).slice(0,8).map(x=>String(x||"").slice(0,100));
       while(a.length<2)a.push("");
-      return{q:String(q.q||"").slice(0,200),img:/^data:image\//.test(q.img)?q.img:"",type:q.type=="text"?"text":"choice",a,
-        ok:(x=>x.length?x:[0])([...new Set((Array.isArray(q.ok)?q.ok:[q.ok]).map(Number).filter(x=>x>=0&&x<a.length))]),
-        txt:String(q.txt||"").slice(0,200),tol:Math.min(9,Math.max(0,Math.round(+q.tol)||0)),
-        time:Math.min(300,Math.max(5,Math.round(+q.time)||20))}})};
-}
-function add(o){
-  try{
-    const q=clean(o);
-    if(confirm("Add the quiz “"+q.title+"” ("+q.qs.length+" questions)?")){const g=load();g.push(q);if(save(g))home()}
-  }catch(e){alert("That is not a valid Quizzy quiz.")}
-}
-function imp(f){if(f)f.text().then(t=>add(JSON.parse(t))).catch(()=>alert("That is not a valid Quizzy quiz."))}
-function share(id){
-  const g=load().find(x=>x.id==id),o={title:g.title,qs:g.qs.map(q=>({...q,img:""}))},
-  u=location.href.split(/[?#]/)[0]+"#import="+btoa(unescape(encodeURIComponent(JSON.stringify(o))));
-  (navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(
-    ()=>alert("Link copied. It carries the questions and answers. To include images, send an exported file instead."),
-    ()=>prompt("Copy this link:",u));
-}
-
-/* ---------- editor ---------- */
-function edit(id){
-  cur=id?JSON.parse(JSON.stringify(load().find(x=>x.id==id))):{id:""+Date.now(),title:"",qs:[blank()]};
-  fq=undefined;show("edit");ed();
-}
-const ind=q=>q.type=="text"?"✎ Typed answer":q.ok.length>1?"☑ Multiple right answers":"◉ One right answer";
-function ed(){
-  $("#t").value=cur.title;
-  $("#qs").innerHTML=cur.qs.map((q,i)=>`<div class="card" onpointerdown="fq=${i}" onfocusin="fq=${i}">
-    <div class="row"><button class="o s" onclick="cur.qs[${i}].c=!cur.qs[${i}].c;ed()" aria-label="Collapse or expand">${q.c?"▸":"▾"}</button><b>${i+1}</b>
-      <input placeholder="Question" value="${esc(q.q)}" oninput="cur.qs[${i}].q=this.value">
-      ${q.c?`<small>${ind(q)} · ${q.time}s</small>`:""}</div>
-    ${q.c?"":`<div class="row" style="margin:8px 0">
-      <select style="width:auto" onchange="cur.qs[${i}].type=this.value;ed()"><option value="choice">Pick an answer</option><option value="text" ${q.type=="text"?"selected":""}>Type the answer</option></select>
-      <span class="badge" id="mb${i}">${ind(q)}</span>
-      <label class="row" style="gap:4px"><input type="number" min="5" max="300" value="${q.time}" oninput="cur.qs[${i}].time=+this.value"> sec</label>
-      <button class="r s" style="margin-left:auto" onclick="cur.qs.splice(${i},1);ed()">Delete</button></div>
-    <div class="row" style="margin-bottom:8px">
-      ${q.img?`<img src="${esc(q.img)}" alt="" style="height:70px;border-radius:8px"><button class="o s" onclick="cur.qs[${i}].img='';ed()">Remove image</button>`:""}
-      <input type="file" accept="image/*" onchange="pic(${i},this.files[0])"><small>or paste with Ctrl+V</small></div>
-    ${q.type=="text"?`<label>Accepted answers, separated by commas<input value="${esc(q.txt)}" oninput="cur.qs[${i}].txt=this.value"></label>
-      <label class="row" style="margin-top:8px">Allowed typos <input type="number" min="0" max="9" value="${q.tol??1}" oninput="cur.qs[${i}].tol=+this.value"> letters wrong, missing or extra</label>`
-    :`<div class="grid">${q.a.map((a,j)=>`<label class="at c${j}">
-      <input type="checkbox" title="Correct answer" ${q.ok.includes(j)?"checked":""} onchange="tog(${i},${j},this.checked)">
-      <input placeholder="Answer ${LT[j]}" value="${esc(a)}" oninput="cur.qs[${i}].a[${j}]=this.value">
-      ${q.a.length>2?`<button class="s" style="background:var(--ink);color:#fff" onclick="rmA(${i},${j})" aria-label="Remove answer">✕</button>`:""}</label>`).join("")}</div>
-      ${q.a.length<8?`<p><button class="o s" onclick="cur.qs[${i}].a.push('');ed()">+ Add answer</button></p>`:""}`}`}
-  </div>`).join("");
-}
-function rmA(i,j){
-  const q=cur.qs[i];
-  q.a.splice(j,1);q.ok=q.ok.filter(x=>x!=j).map(x=>x>j?x-1:x);
-  if(!q.ok.length)q.ok=[0];
-  ed();
-}
-function tog(i,j,on){
-  const q=cur.qs[i];
-  q.ok=on?[...new Set([...q.ok,j])]:q.ok.filter(x=>x!=j);
-  $("#mb"+i).textContent=ind(q);
-}
-function addQ(){cur.qs.push(blank());ed();scrollTo(0,document.body.scrollHeight)}
-function pic(i,f){
-  if(!f||!cur.qs[i])return;
-  const r=new FileReader();
-  r.onload=()=>{const im=new Image();
-    im.onload=()=>{const s=Math.min(1,480/im.width),c=document.createElement("canvas");
-      c.width=im.width*s;c.height=im.height*s;c.getContext("2d").drawImage(im,0,0,c.width,c.height);
-      cur.qs[i].img=c.toDataURL("image/jpeg",.7);ed()};
-    im.src=r.result};
-  r.readAsDataURL(f);
-}
-addEventListener("paste",e=>{
-  if($("#edit").hidden)return;
-  const it=[...e.clipboardData.items].find(x=>x.type.startsWith("image/"));
-  if(it){e.preventDefault();pic(fq??cur.qs.length-1,it.getAsFile())}
-});
-function saveQ(){
-  if(!cur.title.trim())return alert("Give your quiz a title.");
-  if(!cur.qs.length)return alert("Add at least one question.");
-  for(const [i,q] of cur.qs.entries()){
-    q.time=Math.min(300,Math.max(5,Math.round(q.time)||20));
-    q.tol=Math.min(9,Math.max(0,Math.round(q.tol??1)||0));
-    const text=q.type=="text",
-    bad=!q.q.trim()||(text?!acc(q).length:q.a.filter(x=>x.trim()).length<2||!q.ok.length||q.ok.some(j=>!q.a[j].trim()));
-    if(bad)return alert("Question "+(i+1)+" is incomplete. Add the question text and "+(text?"at least one accepted answer.":"at least 2 answers, with every ticked answer filled in."));
-  }
-  cur.qs.forEach(q=>delete q.c);
-  const g=load(),k=g.findIndex(x=>x.id==cur.id);
-  k<0?g.push(cur):g[k]=cur;
-  if(save(g))home();
-}
-
-/* ---------- host (runs on this device) ---------- */
-function hostGame(id){
-  H={g:load().find(x=>x.id==id),i:-1,cfg:{shuf:0,speed:1,lb:1,time:0}};
-  players={};mk(0);
-}
-function mk(n){
-  const code=""+(100000+Math.floor(Math.random()*900000));
-  H.code=code;peer=new Peer("kqz-"+code);
-  peer.on("open",lobby);
-  peer.on("error",e=>{
-    if(e.type=="unavailable-id"&&n<5){peer.destroy();mk(n+1)}
-    else{alert("Could not start hosting ("+e.type+"). Check your internet connection.");endHost()}
-  });
-  peer.on("connection",c=>{
-    c.on("data",m=>onMsg(c,m));
-    c.on("close",()=>{if(players[c.peer]&&H.st=="lobby")delete players[c.peer];lobbyUpd()});
-  });
-}
-function lobby(){
-  H.st="lobby";show("host");music(1);
-  const u=location.href.split(/[?#]/)[0]+"?code="+H.code;
-  $("#host").innerHTML=`<h2>${esc(H.g.title)}</h2><p>Join with this code</p><div class="code">${H.code}</div>
-  <p><small>${esc(u)}</small></p>
-  <div id="pl"></div>
-  <div class="card" style="text-align:left"><b>Game settings</b>
-    <label class="row"><input type="checkbox" onchange="H.cfg.shuf=+this.checked"> Shuffle question order</label>
-    <label class="row"><input type="checkbox" checked onchange="H.cfg.speed=+this.checked"> Faster answers earn more points</label>
-    <label class="row"><input type="checkbox" checked onchange="H.cfg.lb=+this.checked"> Show leaderboard after each question</label>
-    <label class="row">Time per question
-      <select style="width:auto" onchange="H.cfg.time=+this.value"><option value="0">As set in the quiz</option>${[10,20,30,60].map(t=>`<option value="${t}">${t} seconds for all</option>`).join("")}</select></label>
-  </div>
-  <div class="row" style="justify-content:center"><button class="g" id="go" onclick="nextQ()">Start game</button><button class="o" onclick="endHost()">Cancel</button></div>
-  <p><small>Keep this tab open while people play.</small></p>`;
-  lobbyUpd();
-}
-function lobbyUpd(){
-  const l=$("#pl");if(!l||H.st!="lobby")return;
-  const a=live();
-  l.innerHTML=a.map(p=>`<span class="chip">${p.e} ${esc(p.name)}</span>`).join("")||"<p>Waiting for players…</p>";
-  $("#go").disabled=!a.length;
-}
-function onMsg(c,m){
-  if(m.t=="join"){
-    if(H.st!="lobby")return c.send({t:"no",why:"That game has already started."});
-    let n=(m.name+"").slice(0,16),b=n,k=2;
-    while(Object.values(players).some(p=>p.name==n))n=b+" "+k++;
-    players[c.peer]={name:n,e:EM.includes(m.e)?m.e:EM[0],score:0,c,ans:null};
-    c.send({t:"in",name:n});sfx("join");lobbyUpd();
-  }else if(m.t=="ans"){
-    const q=H.g.qs[H.i]||{},p=players[c.peer],a=q.type=="text"?(typeof m.a=="string"?m.a.trim().slice(0,40):""):Array.isArray(m.a)?[...new Set(m.a.filter(x=>Number.isInteger(x)&&x>=0&&x<(q.a||[]).length))]:[];
-    if(H.st=="q"&&p&&p.ans==null&&a.length){
-      p.ans=a;p.ms=Date.now()-H.t0;cnt();
-      if(live().every(p=>p.ans!=null))reveal();
-    }
-  }
-}
-function nextQ(){
-  if(H.i<0&&H.cfg.shuf)H.g.qs.sort(()=>Math.random()-.5);
-  H.i++;H.i>=H.g.qs.length?fin():ask();
-}
-function opts(q,c){
-  return q.a.map((t,j)=>t.trim()?`<div class="opt c${j}" style="animation-delay:${j*.07}s;${c&&!q.ok.includes(j)?"opacity:.35":""}"><span class="l">${LT[j]}</span><span>${c&&q.ok.includes(j)?"✓ ":""}${esc(t)}</span>${c?`<b style="margin-left:auto">${c[j]}</b>`:""}</div>`:"").join("");
-}
-function cnt(){
-  const e=$("#cnt");
-  if(e&&H.st=="q")e.textContent=live().filter(p=>p.ans!=null).length+" / "+live().length+" answered";
-}
-function ask(){
-  H.st="q";
-  const q=H.g.qs[H.i],n=H.g.qs.length,t=H.cfg.time||q.time,mu=q.ok.length>1;
-  H.t=t;Object.values(players).forEach(p=>p.ans=null);H.t0=Date.now();
-  bc({t:"q",i:H.i,n,q:q.q,a:q.a,time:t,multi:mu,type:q.type,img:q.img});sfx("go");
-  $("#host").innerHTML=`<div class="bar"><i style="animation-duration:${t}s"></i></div>
-  <p>Question ${H.i+1} of ${n} ${q.type=="text"?'<span class="badge">type the answer</span>':mu?'<span class="badge">select all that apply</span>':""}</p><h2>${esc(q.q)}</h2>
-  ${q.img?`<img src="${esc(q.img)}" alt="" style="max-width:100%;max-height:34vh;border-radius:14px">`:""}
-  <div class="row" style="justify-content:space-between"><h1 id="tm">${t}</h1><span id="cnt"></span><button class="o" onclick="reveal()">Skip</button></div>
-  ${q.type=="text"?"<h3>Type your answer on your device</h3>":`<div class="grid">${opts(q)}</div>`}`;
-  clock(t,reveal,1);cnt();
-}
-function reveal(){
-  if(H.st!="q")return;
-  H.st="r";clearInterval(tk);sfx("pop");
-  const q=H.g.qs[H.i],tx=q.type=="text",ac=acc(q),c=q.a.map(()=>0);
-  Object.values(players).forEach(p=>{
-    p.d=0;
-    if(tx){const s=p.ans?norm(p.ans):"";p.ok=!!s&&ac.some(x=>lev(x,s)<=Math.min(q.tol??1,Math.max(0,x.length-1)))}
-    else{const s=p.ans||[];p.ok=s.length==q.ok.length&&q.ok.every(x=>s.includes(x));s.forEach(x=>c[x]++)}
-    if(p.ok){p.d=H.cfg.speed?Math.max(100,Math.round(1000*(1-p.ms/1000/H.t/2))):1000;p.score+=p.d}
-  });
-  const r=rank(),L=H.cfg.lb?lb(5):0,hit=r.filter(p=>p.ok).length;
-  r.forEach((p,i)=>p.c.open&&p.c.send({t:"r",ok:p.ok,got:p.ans!=null,d:p.d,s:p.score,r:i+1,n:r.length,ca:tx?q.txt:"",lb:L}));
-  $("#host").innerHTML=`<h2>${esc(q.q)}</h2>
-  ${tx?`<div class="card"><p>Accepted answers</p><h1>${esc(q.txt)}</h1><p>${hit} of ${r.length} got it right</p></div>`:`<div class="grid">${opts(q,c)}</div>`}
-  ${L?"<h2>Leaderboard</h2>"+board(5):""}
-  <p><button class="g" onclick="nextQ()">${H.i+1<H.g.qs.length?"Next question":"Finish"}</button></p>`;
-}
-function fin(){
-  H.st="end";sfx("end");music(0);
-  const r=rank(),top=lb(3);
-  r.forEach((p,i)=>p.c.open&&p.c.send({t:"end",s:p.score,r:i+1,n:r.length,top}));
-  $("#host").innerHTML=`<h1>Final results</h1>${podium(top)}${board(8,3)}<p><button class="g" onclick="endHost()">Done</button></p>`;
-}
-function endHost(){clearInterval(tk);peer&&peer.destroy();peer=0;home()}
-
-/* ---------- player ---------- */
-function join(){
-  const code=$("#code").value.trim(),name=$("#nick").value.trim(),j=$("#jmsg");
-  if(!code||!name){j.textContent="Enter a game code and a nickname.";return}
-  j.textContent="Connecting…";over=0;
-  peer&&peer.destroy();
-  peer=new Peer();
-  peer.on("error",e=>j.textContent=e.type=="peer-unavailable"?"No game found with that code.":"Connection error ("+e.type+").");
-  peer.on("open",()=>{
-    pc=peer.connect("kqz-"+code);
-    pc.on("open",()=>pc.send({t:"join",name,e:em}));
-    pc.on("data",pmsg);
-    pc.on("close",()=>{music(0);if(!over)pscr('<h2>Host disconnected</h2><button onclick="leave()">Home</button>')});
-    setTimeout(()=>{if(!pc.open&&!$("#home").hidden)j.textContent="Could not connect. Check the code and your network."},12000);
-  });
-}
-function pmsg(m){
-  if(m.t=="no"){leave();$("#jmsg").textContent=m.why}
-  else if(m.t=="in"){sfx("join");music(1);pscr(`<div style="font-size:5rem;animation:bounce .6s">${em}</div><h2>You’re in, ${esc(m.name)}!</h2><p>Watch the host screen…</p>`)}
-  else if(m.t=="q"){
-    pick=[];multi=m.multi;sfx("pop");
-    pscr(`<div class="bar"><i style="animation-duration:${m.time}s"></i></div><p>Question ${m.i+1} of ${m.n}</p><h1 id="tm">${m.time}</h1><h3>${esc(m.q)}</h3>
-    ${m.img?`<img src="${esc(m.img)}" alt="" style="max-width:100%;max-height:30vh;border-radius:14px">`:""}
-    ${m.type=="text"?`<p><input id="ta" maxlength="40" autocomplete="off" placeholder="Type your answer" style="font-size:1.4rem;text-align:center" onkeydown="if(event.key=='Enter')sendT()"></p><button class="g" onclick="sendT()">Submit answer</button>`
-    :`${m.multi?'<p><span class="badge">select all that apply</span></p>':""}
-    <div class="grid">${m.a.map((t,j)=>t.trim()?`<button class="opt c${j}" id="o${j}" style="animation-delay:${j*.07}s" onclick="tap(${j})"><span class="l">${LT[j]}</span><span>${esc(t)}</span></button>`:"").join("")}</div>
-    ${m.multi?'<p><button class="g" onclick="submit()">Submit answer</button></p>':""}`}`);
-    clock(m.time);
-  }else if(m.t=="r"){
-    clearInterval(tk);sfx(m.ok?"ok":"no");
-    pscr(`<div class="${m.ok?"good":"bad"}"><div style="font-size:5rem;animation:${m.ok?"bounce":"shake"} .6s">${m.ok?"🎉":m.got?"💥":"⏰"}</div>
-    <h1>${m.ok?"Correct!":m.got?"Not quite":"Too slow"}</h1>${m.ca&&!m.ok?`<p>Answer: <b>${esc(m.ca)}</b></p>`:""}<h2>+${m.d} points</h2><p>${em} ${m.s} total · place ${m.r} of ${m.n}</p></div>
-    ${m.lb?"<h3>Leaderboard</h3>"+rows(m.lb):""}`);
-  }else if(m.t=="end"){
-    over=1;clearInterval(tk);sfx("end");music(0);
-    pscr(`<h1>Game over</h1>${podium(m.top)}<h2>${em} You: place ${m.r} of ${m.n}</h2><p>${m.s} points</p><button onclick="leave()">Home</button>`);
-  }
-}
-function send(a){pc.send({t:"ans",a});clearInterval(tk);pscr("<h2>Answer sent!</h2><p>Waiting for the others…</p>")}
-function tap(j){
-  if(!multi)return send([j]);
-  const i=pick.indexOf(j);
-  i<0?pick.push(j):pick.splice(i,1);
-  $("#o"+j).classList.toggle("sel");
-}
-function submit(){if(pick.length)send(pick)}
-function sendT(){const v=$("#ta").value.trim();if(v)send(v)}
-function leave(){over=1;clearInterval(tk);peer&&peer.destroy();peer=0;home()}
-
-/* ---------- start ---------- */
-const m=location.search.match(/code=(\d+)/);
-if(m)$("#code").value=m[1];
-home();
-const h=location.hash.match(/^#import=(.+)/);
-if(h){
-  history.replaceState(0,"",location.pathname+location.search);
-  try{add(JSON.parse(decodeURIComponent(escape(atob(h[1])))))}catch(e){alert("That share link is broken.")}
-}
-</script>
-</body>
-</html>
+      const ok=(x=>x.length?x:[0])([...new Set((Array.isArray(q.ok)?q.ok:[q.ok]).map(Number).filter(x=>x>=0&&x<a.length))]);
+      return{q:Strin
