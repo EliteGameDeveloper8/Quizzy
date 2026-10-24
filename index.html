@@ -73,6 +73,12 @@ main{padding:52px 16px 76px}
 .qrb.big svg{width:min(88vw,70vh);height:min(88vw,70vh)}
 .qrb.big .qc{display:block}
 #lg svg{display:block;height:16px;width:auto;border-radius:2px}
+#ver{position:fixed;bottom:3px;right:6px;z-index:9;font-size:10px;opacity:.45;pointer-events:none}
+#bigj{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3vh;background:#06141f;cursor:zoom-out;text-align:center}
+#bigj .code{font-size:min(20vw,16vh);line-height:1}
+#bigj svg{width:min(88vw,52vh);height:min(88vw,52vh);border-radius:12px}
+#bigj .bx{position:fixed;bottom:18px;left:0;right:0;opacity:.6}
+@media(orientation:landscape){#bigj{flex-direction:row;gap:6vw}#bigj .code{font-size:min(14vw,28vh)}#bigj svg{width:min(70vh,40vw);height:min(70vh,40vw)}}
 </style>
 </head>
 <body>
@@ -80,6 +86,7 @@ main{padding:52px 16px 76px}
 <button id="mute" class="o s" onclick="mute=!mute;LS.setItem('qz_mute',mute?1:0);this.textContent=mute?'🔇':'🔊'" title="Sound effects on/off" aria-label="Sound effects on/off"></button>
 <button id="lg" class="o s" onclick="togLang()" title="Language" aria-label="Language"></button>
 <div id="emo" hidden></div>
+<div id="ver" translate="no">v1.1</div>
 <main>
 <section id="menu" class="mid">
   <h1 class="logo">Quizzy</h1>
@@ -150,7 +157,7 @@ norm=(s,cs)=>{s=String(s).trim().replace(/\s+/g," ");return cs?s:s.toLowerCase()
 acc=q=>(q.txt||"").split(",").map(x=>norm(x,q.cs)).filter(Boolean),
 lev=(a,b)=>{let p=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;i++){const c=[i];for(let j=1;j<=b.length;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]==b[j-1]?0:1));p=c}return p[b.length]};
 let mm=LS.getItem("qz_mm")=="1",em=LS.getItem("qz_em")||EM[0],mw=0,mi,bt=0;
-let mst=LS.getItem("qz_mus")||"upbeat",X,NB;
+let mst=LS.getItem("qz_mus")||"upbeat",X,NB,qt=0;
 const mmUi=()=>{$("#mm").textContent=mm?"🎵 ✕":"🎵"},
 togMm=()=>{mm=!mm;LS.setItem("qz_mm",mm?1:0);mmUi();music(mw)},
 hz=n=>440*2**((n-69)/12),rnd=n=>Math.floor(Math.random()*n),pk=a=>a[rnd(a.length)],
@@ -162,7 +169,7 @@ upbeat:{bpm:122,rt:48,lo:24,sc:[0,2,4,7,9],sw:0,wet:.18,ln:[1,1,1,2,2,3,4],rp:.2
  pr:[[[0,"M"],[7,"M"],[9,"m"],[5,"M"]],[[0,"M"],[9,"m"],[5,"M"],[7,"M"]],[[5,"M"],[7,"M"],[4,"m"],[9,"m"]],[[0,"M"],[5,"M"],[7,"M"],[5,"M"]]],
  k:["x...x...x...x...","x...x...x..xx..."],s:["....x.......x..."],h:["..x...x...x...x.","x.x.x.x.x.x.x.x."],
  b:["r.......r...f...","r..r..r.r..r..f.","r.r.r.r.r.r.r.r."],c:["..x...x...x...x.","x.....x...x....."]},
-chill:{bpm:80,rt:48,lo:12,sc:[0,2,4,7,9],sw:.5,wet:.35,ln:[2,2,3,4,4,6],rp:.4,cm:"ep",lt:"sine",bt:"sine",bv:.55,cv:.13,ev:.4,
+chill:{bpm:80,rt:48,lo:12,sc:[0,2,4,7,9],sw:.5,wet:.2,dry:1,ln:[2,2,3,4,4,6],rp:.4,cm:"ep",lt:"sine",bt:"sine",bv:.55,cv:.13,ev:.4,
  pr:[[[0,"M7"],[9,"m7"],[2,"m7"],[7,"7"]],[[5,"M7"],[4,"m7"],[2,"m7"],[0,"M7"]],[[9,"m7"],[2,"m7"],[7,"7"],[0,"M7"]],[[0,"M7"],[5,"M7"],[4,"m7"],[9,"m7"]]],
  k:["x.....x...x.....","x.......x.x....."],s:["....x.......x..."],h:["x.x.x.x.x.x.x.x.","..x...x...x...x."],
  b:["r.......r.....f.","r.....r.r......."],c:["x.....x...x.....","x.......x.....x."]},
@@ -196,7 +203,7 @@ function mel(S,end){
 const mut=a=>{a=a.map(x=>x&&{...x});for(let k=0;k<3;k++){const x=a[rnd(16)];if(x)x.i=Math.max(0,Math.min(9,x.i+pk([-2,-1,1,2])))}return a};
 /* one 16th-note step. Every 4 bars: new chord progression and drum/bass patterns; every 8 sections: new melody; layers come and go (ARR) */
 function mstep(){
-  const S=X.S,s=X.st%16,sp=60/S.bpm/4,t=X.t+(s%4==2?S.sw*sp:0),o=X.bus;
+  const S=X.S,s=X.st%16,sp=60/S.bpm/4,t=X.t+(s%4==2?S.sw*sp:0),o=X.bus,dy=S.dry?X.dry:X.bus;
   if(!s){
     const bi=X.B++%4;
     if(!bi){
@@ -210,13 +217,13 @@ function mstep(){
   }
   const [r0,ty]=X.ch,rt=r0>=6?r0-12:r0,iv=CT[ty],bi=X.bi,lv=X.lv,base=S.rt+12+rt;
   if(lv>=2){
-    if(X.k[s]=="x")dr(o,"k",t,.9);
-    if(X.sn[s]=="x")dr(o,"s",t,.4);
-    if(X.h[s]=="x")dr(o,"h",t,s%4==2?.16:.1);
-    if(bi==3&&s>=12&&S.cm!="ep")dr(o,"s",t,.12+.05*(s-12));
+    if(X.k[s]=="x")dr(dy,"k",t,.9);
+    if(X.sn[s]=="x")dr(dy,"s",t,.4);
+    if(X.h[s]=="x")dr(dy,"h",t,s%4==2?.16:.1);
+    if(bi==3&&s>=12&&S.cm!="ep")dr(dy,"s",t,.12+.05*(s-12));
   }
   const bn=X.bp[s];
-  if(bn!=".")vo(o,t,hz(S.rt+rt+(bn=="f"?7:bn=="o"?12:0)),sp*3,S.bv,S.bt);
+  if(bn!=".")vo(dy,t,hz(S.rt+rt+(bn=="f"?7:bn=="o"?12:0)),sp*3,S.bv,S.bt);
   if(S.cm=="arp")vo(o,t,hz(base+12+iv[[0,1,2,1][s%4]%iv.length]),sp*1.6,S.cv,"square");
   else if(X.cp[s]=="x")iv.forEach(x=>S.cm=="ep"?(vo(o,t,hz(base+x),1.4,S.cv,"sine"),vo(o,t,hz(base+x+12),.5,S.cv*.3,"sine")):vo(o,t,hz(base+x),.2,S.cv,"sawtooth",1300));
   if(lv>=3&&s%2==0){
@@ -239,14 +246,14 @@ function mtick(){
 function music(on){
   mw=on;clearInterval(mi);mi=0;
   if(X){const x=X;X=0;x.out.gain.cancelScheduledValues(0);x.out.gain.setTargetAtTime(0,AC.currentTime,.08);setTimeout(()=>x.out.disconnect(),700)}
-  if(!on||mm||!MS[mst])return;
+  if(!on||mm||qt||!MS[mst])return;
   try{
     AC=AC||new AudioContext();AC.resume();
-    const S=MS[mst],out=AC.createGain(),bus=AC.createGain(),dl=AC.createDelay(1),fb=AC.createGain(),wt=AC.createGain(),n=AC.currentTime;
+    const S=MS[mst],out=AC.createGain(),bus=AC.createGain(),dry=AC.createGain(),dl=AC.createDelay(1),fb=AC.createGain(),wt=AC.createGain(),n=AC.currentTime;
     out.gain.setValueAtTime(0,n);out.gain.linearRampToValueAtTime(.2,n+.5);
     dl.delayTime.value=60/S.bpm*.75;fb.gain.value=.3;wt.gain.value=S.wet;
-    bus.connect(out);bus.connect(dl);dl.connect(fb);fb.connect(dl);dl.connect(wt);wt.connect(out);out.connect(AC.destination);
-    X={S,out,bus,t:n+.1,st:0,B:0,sec:2,pr:0,A:mel(S,0),Z:mel(S,1)};
+    bus.connect(out);dry.connect(out);bus.connect(dl);dl.connect(fb);fb.connect(dl);dl.connect(wt);wt.connect(out);out.connect(AC.destination);
+    X={S,out,bus,dry,t:n+.1,st:0,B:0,sec:2,pr:0,A:mel(S,0),Z:mel(S,1)};
     mi=setInterval(mtick,100);
   }catch(e){X=0}
 }
@@ -260,7 +267,7 @@ function podium(l){return `<div class="pod">${[1,0,2].map(i=>l[i]?`<div class="p
 /* ---------- sound ---------- */
 const NOTES={tick:[[880,.05]],click:[[600,.04]],pop:[[520,.06],[780,.08]],join:[[660,.08],[880,.12]],go:[[392,.1],[523,.1],[659,.1],[784,.25]],ok:[[523,.1],[659,.1],[784,.25]],no:[[260,.15],[196,.3]],end:[[523,.15],[659,.15],[784,.15],[1047,.4]]};
 function sfx(k){
-  if(mute)return;
+  if(mute||qt)return;
   try{
     AC=AC||new AudioContext();AC.resume();
     let t=AC.currentTime;
@@ -410,7 +417,7 @@ function saveQ(){
 
 /* ---------- host (runs on this device) ---------- */
 function hostGame(id){
-  H={g:load().find(x=>x.id==id),i:-1,cfg:{shuf:0,speed:1,lb:1,time:0,streak:0,pen:0,lim:0,auto:0,emo:1,max:0,mus:LS.getItem("qz_mus")||"upbeat"}};mst=H.cfg.mus;
+  H={g:load().find(x=>x.id==id),i:-1,cfg:{shuf:0,speed:1,lb:1,time:0,streak:0,pen:0,lim:0,auto:0,emo:1,max:0,po:0,mus:LS.getItem("qz_mus")||"upbeat"}};mst=H.cfg.mus;
   players={};mk(0);
 }
 function mk(n){
@@ -432,7 +439,7 @@ function lobby(){
   ck=(k,t)=>`<label class="row"><input type="checkbox" ${c[k]?"checked":""} onchange="H.cfg.${k}=+this.checked"> ${t}</label>`,
   sel=(k,t,o)=>`<label class="row">${t} <select style="width:auto" onchange="H.cfg.${k}=+this.value">${o.map(([v,l])=>`<option value="${v}" ${c[k]==v?"selected":""}>${l}</option>`).join("")}</select></label>`;
   $("#host").innerHTML=`<h2>${esc(H.g.title)}</h2><div class="row" style="justify-content:center;gap:24px"><div><p>Join with this code</p><div class="code">${H.code}</div></div>${qrBox(u,H.code)}</div>
-  <p><small>${esc(u)}</small> <button class="s" onclick="copyLink(this)">Copy link</button></p>
+  <p><small>${esc(u)}</small> <button class="s" onclick="copyLink(this)">Copy link</button> <button class="s" onclick="bigJoin()">🔍 Maximize code and QR</button></p>
   <div id="pl"></div>
   <div class="card" style="text-align:left"><b>Game settings</b>
     ${ck("shuf","Shuffle question order")}${ck("speed","Faster answers earn more points")}${ck("streak","Streak bonus for answering correctly in a row")}
@@ -441,6 +448,7 @@ function lobby(){
     ${sel("lim","Number of questions",[[0,"All"],5,10,20].map(t=>t.length?t:[t,t]))}
     ${sel("max","Player limit",[[0,"No limit"],...[5,10,25,50].map(t=>[t,t])])}
     <label class="row">Music ${musSel()}</label>
+    ${ck("po","Players also hear music and sounds on their own devices")}
   </div>
   <div class="row" style="justify-content:center"><button class="g" id="go" onclick="nextQ()">Start game</button><button class="o" onclick="endHost()">Cancel</button></div>
   <p><small>Keep this tab open while people play.</small></p>`;
@@ -461,7 +469,7 @@ function onMsg(c,m){
     let n=(m.name+"").slice(0,16),b=n,k=2;
     while(Object.values(players).some(p=>p.name==n))n=b+" "+k++;
     players[c.peer]={name:n,e:EM.includes(m.e)?m.e:EM[0],score:0,c,ans:null};
-    c.send({t:"in",name:n,mus:H.cfg.mus});sfx("join");lobbyUpd();
+    c.send({t:"in",name:n,mus:H.cfg.mus,po:H.cfg.po});sfx("join");lobbyUpd();
   }else if(m.t=="ans"){
     const q=H.g.qs[H.i]||{},p=players[c.peer],a=q.type=="text"?(typeof m.a=="string"?m.a.trim().slice(0,40):""):Array.isArray(m.a)?[...new Set(m.a.filter(x=>Number.isInteger(x)&&x>=0&&x<(q.a||[]).length))]:[];
     if(H.st=="q"&&p&&p.ans==null&&a.length){
@@ -475,7 +483,7 @@ function nextQ(){
   if(H.i<0){
     if(H.cfg.shuf)H.g.qs.sort(()=>Math.random()-.5);
     if(H.cfg.lim)H.g.qs=H.g.qs.slice(0,H.cfg.lim);
-    bc({t:"cfg",emo:H.cfg.emo});
+    bc({t:"cfg",emo:H.cfg.emo,po:H.cfg.po});
   }
   H.i++;H.i>=H.g.qs.length?fin():ask();
 }
@@ -544,9 +552,9 @@ function join(){
 }
 function pmsg(m){
   if(m.t=="no"){leave();show("join");$("#jmsg").textContent=m.why}
-  else if(m.t=="cfg")emoOn=m.emo;
+  else if(m.t=="cfg"){emoOn=m.emo;const q=m.po?0:1;if(q!=qt){qt=q;music(1)}}
   else if(m.t=="mus"){mst=m.v;music(mw)}
-  else if(m.t=="in"){if(m.mus)mst=m.mus;sfx("join");music(1);pscr(`<div style="font-size:5rem;animation:bounce .6s">${em}</div><h2>You’re in, ${esc(m.name)}!</h2><p>Watch the host screen…</p>`)}
+  else if(m.t=="in"){qt=m.po?0:1;if(m.mus)mst=m.mus;sfx("join");music(1);pscr(`<div style="font-size:5rem;animation:bounce .6s">${em}</div><h2>You’re in, ${esc(m.name)}!</h2><p>Watch the host screen…</p>`)}
   else if(m.t=="q"){
     pick=[];multi=m.multi;sfx("pop");
     pscr(`<div class="bar"><i style="animation-duration:${m.time}s"></i></div><p>Question ${m.i+1} of ${m.n}</p><h1 id="tm">${m.time}</h1><h3>${esc(m.q)}</h3>
@@ -608,7 +616,14 @@ function copyLink(b){
   (navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(
     ()=>{b.textContent="Copied!";setTimeout(()=>b.textContent="Copy link",1500)},()=>prompt("Copy this link:",u));
 }
-function menu(){if(!$("#ended").hidden)$("#code").value="";$("#ended").hidden=1;$("#jcard").hidden=0;show("menu");music(0)}
+function bigJoin(){
+  const o=$("#bigj");if(o)return o.remove();
+  const s=document.querySelector(".qrb svg"),d=document.createElement("div");
+  d.id="bigj";d.onclick=()=>d.remove();
+  d.innerHTML=`<div><p>Join with this code</p><div class="code">${esc(H.code)}</div></div>${s?s.outerHTML:""}<small class="bx">Tap anywhere to close</small>`;
+  document.body.appendChild(d);
+}
+function menu(){qt=0;if(!$("#ended").hidden)$("#code").value="";$("#ended").hidden=1;$("#jcard").hidden=0;show("menu");music(0)}
 
 /* ---------- QR code ---------- */
 function qr(text){
@@ -657,9 +672,9 @@ function qrBox(u,code){
   let m;try{m=/^https?:/.test(u)&&qr(u)}catch(e){}
   if(!m)return"";
   const n=m.length+8,p=[];m.forEach((r,y)=>r.forEach((d,x)=>d&&p.push(`M${x+4} ${y+4}h1v1h-1z`)));
-  return `<div class="qrb" role="button" tabindex="0" title="Tap to enlarge" onclick="this.classList.toggle('big')" onkeydown="if(event.key=='Enter'||event.key==' ')this.click()"><svg viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges" role="img" aria-label="QR code"><rect width="${n}" height="${n}" fill="#fff"/><path d="${p.join("")}"/></svg><small>Or scan to join</small><span class="qc">${code}</span></div>`;
+  return `<div class="qrb" role="button" tabindex="0" title="Tap to enlarge" onclick="bigJoin()" onkeydown="if(event.key=='Enter'||event.key==' ')this.click()"><svg viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges" role="img" aria-label="QR code"><rect width="${n}" height="${n}" fill="#fff"/><path d="${p.join("")}"/></svg><small>Or scan to join</small><span class="qc">${code}</span></div>`;
 }
-addEventListener("keydown",e=>{if(e.key=="Escape")document.querySelectorAll(".qrb.big").forEach(x=>x.classList.remove("big"))});
+addEventListener("keydown",e=>{if(e.key=="Escape"){const b=$("#bigj");b&&b.remove()}});
 
 /* ---------- Romanian ---------- */
 const RO=Object.fromEntries(`Join a game|Intră într-un joc
@@ -772,7 +787,10 @@ Music on/off|Muzică pornită/oprită
 Sound effects on/off|Efecte sonore pornite/oprite
 Language|Limbă
 This game has ended.|Jocul s-a încheiat.
-Back to menu|Înapoi la meniu`.split("\n").map(l=>l.split("|")));
+Back to menu|Înapoi la meniu
+🔍 Maximize code and QR|🔍 Mărește codul și QR-ul
+Tap anywhere to close|Atinge oriunde pentru a închide
+Players also hear music and sounds on their own devices|Jucătorii aud muzica și sunetele și pe propriile dispozitive`.split("\n").map(l=>l.split("|")));
 const RU=[
 [/^Question (\d+) of (\d+)$/,m=>`Întrebarea ${m[1]} din ${m[2]}`],
 [/^(\d+) questions$/,m=>m[1]+" întrebări"],
