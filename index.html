@@ -92,13 +92,14 @@ main{padding:52px 16px 76px}
 
 <section id="join" hidden>
   <button class="o" onclick="menu()">← Back</button>
-  <div class="card">
+  <div class="card" id="jcard">
     <h2>Join a game</h2>
     <div class="row"><input id="code" placeholder="Game code" inputmode="numeric"><input id="nick" placeholder="Nickname" maxlength="16"></div>
     <p><small>Pick your character</small></p>
     <div id="ems" class="row" style="margin-bottom:8px"></div>
     <button class="g" onclick="join()">Join</button> <small id="jmsg"></small>
   </div>
+  <div id="ended" class="card mid" hidden><div style="font-size:3.5rem">🚪</div><h2 id="emsg"></h2><button class="g" onclick="menu()">Back to menu</button></div>
 </section>
 
 <section id="quizzes" hidden>
@@ -311,6 +312,4 @@ function clean(o){
   return{id:""+Date.now()+Math.floor(Math.random()*1e3),title:String(o.title||"Imported quiz").slice(0,80),
     qs:o.qs.slice(0,100).map(q=>{
       const a=(Array.isArray(q.a)?q.a:[]).slice(0,8).map(x=>String(x||"").slice(0,100));
-      while(a.length<2)a.push("");
-      const ok=(x=>x.length?x:[0])([...new Set((Array.isArray(q.ok)?q.ok:[q.ok]).map(Number).filter(x=>x>=0&&x<a.length))]);
-      return{q:Strin
+      w
