@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quizzy</title>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#46178f;color:#fff}
+main{max-width:900px;margin:0 auto;padding:16px}
+h1,h2,h3,p{margin:.4em 0}
+.card{background:#fff;color:#222;border-radius:10px;padding:12px;margin:10px 0}
+button{font:inherit;font-weight:700;border:0;border-radius:8px;padding:10px 16px;cursor:pointer;background:#1368ce;color:#fff}
+button.g{background:#26890c}button.r{background:#e21b3c}button.o{background:#e5e5e5;color:#222}
+button:disabled{opacity:.4;cursor:default}
+:focus-visible{outline:3px solid #ffd02e;outline-offset:2px}
+input,select{font:inherit;padding:9px;border:2px solid #ccc;border-radius:8px;width:100%;min-width:0}
+input[type=file],input[type=radio]{width:auto}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row>input:not([type]){flex:1;min-width:120px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opt{min-height:80px;font-size:1.25rem;border-radius:8px;color:#fff;display:flex;align-items:center;gap:10px;padding:12px;text-align:left}
+.c0{background:#e21b3c}.c1{background:#1368ce}.c2{background:#d89e00}.c3{background:#26890c}
+.code{font-size:min(18vw,7rem);font-weight:900;letter-spacing:.1em}
+.chip{display:inline-block;background:#fff;color:#222;border-radius:20px;padding:6px 14px;margin:4px;font-weight:700}
+.mid{text-align:center}
+#play{padding-top:6vh}
+</style>
+</head>
+<body>
+<main>
+<section id="home">
+  <h1>Quizzy</h1>
+  <div class="card">
+    <h2>Join a game</h2>
+    <div class="row">
+      <input id="code" placeholder="Game code" inputmode="numeric">
+      <input id="nick" placeholder="Nickname" maxlength="16">
+      <button class="g" onclick="join()">Join</button>
+    </div>
+    <small id="jmsg"></small>
+  </div>
+  <div class="row">
+    <h2 style="flex:1">My quizzes</h2>
+    <input id="find" placeholder="Search…" oninput="home()" style="width:150px;flex:none">
+    <button class="g" onclick="edit()">+ New quiz</button>
+  </div>
+  <div id="lib"></div>
+</section>
+
+<section id="edit" hidden>
+  <div class="row">
+    <input id="t" placeholder="Quiz title" oninput="cur.title=this.value">
+    <button class="g" onclick="saveQ()">Save</button>
+    <button class="o" onclick="home()">Cancel</button>
+  </div>
+  <div id="qs"></div>
+  <button onclick="addQ()">+ Add question</button>
+</section>
+
+<section id="host" class="mid" hidden></section>
+<section id="play" class="mid" hidden></section>
+</main>
+
+<script>
+const $=s=>document.querySelector(s),
+esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]),
+SH="▲◆●■",KEY="quizzy_games",
+load=()=>{try{return JSON.parse(localStorage.getItem(KEY))||[]}catch(e){return[]}},
+save=g=>{try{localStorage.setItem(KEY,JSON.stringify(g));return 1}catch(e){alert("Browser storage is full. Use fewer or smaller images.")}},
+show=v=>["home","edit","host","play"].forEach(x=>$("#"+x).hidden=x!=v),
+blank=()=>({q:"",img:"",a:["","","",""],ok:0,time:20}),
+live=()=>Object.values(players).filter(p=>p.c.open),
+bc=m=>live().forEach(p=>p.c.send(m)),
+rank=()=>Object.values(players).sort((a,b)=>b.score-a.score),
+board=n=>rank().slice(0,n).map((p,i)=>`<div class="card row"><b>${i+1}</b><span style="flex:1;text-align:left">${esc(p.name)}</span><b>${p.score}</b></div>`).join("")||"<p>No players</p>",
+pscr=h=>{show("play");$("#play").innerHTML=h};
+let cur,peer,H,pc,over,players={};
+
+/* ---------- library ---------- */
+function home(){
+  show("home");
+  const f=$("#find").value.toLowerCase();
+  $("#lib").innerHTML=load().filter(x=>x.title.toLowerCase().includes(f)).map(x=>
+    `<div class="card row"><div style="flex:1"><b>${esc(x.title)}</b><br><small>${x.qs.length} questions</small></div>
+    <button class="g" onclick="hostGame('${x.id}')">Host</button>
+    <button onclick="edit('${x.id}')">Edit</button>
+    <button class="r" onclick="del('${x.id}')">Delete</button></div>`).join("")
+    ||"<p>No quizzes found. Create one with “New quiz”.</p>";
+}
+function del(id){if(confirm("Delete this quiz?")){save(load().filter(x=>x.id!=id));home()}}
+
+/* ---------- editor ---------- */
+function edit(id){
+  cur=id?JSON.parse(JSON.stringify(load().find(x=>x.id==id))):{id:""+Date.now(),title:"",qs:[blank()]};
+  show("edit");ed();
+}
+function ed(){
+  $("#t").value=cur.title;
+  $("#qs").innerHTML=cur.qs.map((q,i)=>`<div class="card">
+    <div class="row"><b>${i+1}</b>
+      <input placeholder="Question" value="${esc(q.q)}" oninput="cur.qs[${i}].q=this.value">
+      <select onchange="cur.qs[${i}].time=+this.value">${[10,20,30,60].map(t=>`<option value="${t}" ${t==q.time?"selected":""}>${t}s</option>`).join("")}</select>
+      <button class="r" onclick="cur.qs.splice(${i},1);ed()" aria-label="Delete question">✕</button></div>
+    <div class="row" style="margin:8px 0">
+      ${q.img?`<img src="${q.img}" alt="" style="height:70px;border-radius:6px"><button class="o" onclick="cur.qs[${i}].img='';ed()">Remove image</button>`:""}
+      <input type="file" accept="image/*" onchange="pic(${i},this.files[0])"></div>
+    <div class="grid">${q.a.map((a,j)=>`<label class="row c${j}" style="padding:6px;border-radius:8px;flex-wrap:nowrap">
+      <input type="radio" name="r${i}" title="Correct answer" ${q.ok==j?"checked":""} onchange="cur.qs[${i}].ok=${j}">
+      <input placeholder="Answer ${j+1}" value="${esc(a)}" oninput="cur.qs[${i}].a[${j}]=this.value"></label>`).join("")}</div>
+  </div>`).join("");
+}
+function addQ(){cur.qs.push(blank());ed();scrollTo(0,document.body.scrollHeight)}
+function pic(i,f){
+  if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{const im=new Image();
+    im.onload=()=>{const s=Math.min(1,480/im.width),c=document.createElement("canvas");
+      c.width=im.width*s;c.height=im.height*s;c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+      cur.qs[i].img=c.toDataURL("image/jpeg",.7);ed()};
+    im.src=r.result};
+  r.readAsDataURL(f);
+}
+function saveQ(){
+  if(!cur.title.trim())return alert("Give your quiz a title.");
+  if(!cur.qs.length)return alert("Add at least one question.");
+  for(const [i,q] of cur.qs.entries())
+    if(!q.q.trim()||q.a.filter(x=>x.trim()).length<2||!q.a[q.ok].trim())
+      return alert("Question "+(i+1)+" needs text, at least 2 answers, and a filled-in correct answer (the round button).");
+  const g=load(),k=g.findIndex(x=>x.id==cur.id);
+  k<0?g.push(cur):g[k]=cur;
+  if(save(g))home();
+}
+
+/* ---------- host (runs on this device) ---------- */
+function hostGame(id){H={g:load().find(x=>x.id==id),i:-1};players={};mk(0)}
+function mk(n){
+  const code=""+(100000+Math.floor(Math.random()*900000));
+  H.code=code;peer=new Peer("kqz-"+code);
+  peer.on("open",lobby);
+  peer.on("error",e=>{
+    if(e.type=="unavailable-id"&&n<5){peer.destroy();mk(n+1)}
+    else{alert("Could not start hosting ("+e.type+"). Check your internet connection.");endHost()}
+  });
+  peer.on("connection",c=>{
+    c.on("data",m=>onMsg(c,m));
+    c.on("close",()=>{if(players[c.peer]&&H.st=="lobby")delete players[c.peer];lobbyUpd()});
+  });
+}
+function lobby(){
+  H.st="lobby";show("host");
+  const u=location.href.split(/[?#]/)[0]+"?code="+H.code;
+  $("#host").innerHTML=`<h2>Join with this code</h2><div class="code">${H.code}</div>
+  <p>Open <b>${esc(u)}</b> or go to this page and type the code.</p>
+  <div id="pl"></div>
+  <div class="row" style="justify-content:center;margin-top:12px"><button class="g" id="go" onclick="nextQ()">Start</button><button class="o" onclick="endHost()">Cancel</button></div>
+  <p><small>Keep this tab open while people play.</small></p>`;
+  lobbyUpd();
+}
+function lobbyUpd(){
+  const l=$("#pl");if(!l||H.st!="lobby")return;
+  const a=live();
+  l.innerHTML=a.map(p=>`<span class="chip">${esc(p.name)}</span>`).join("")||"Waiting for players…";
+  $("#go").disabled=!a.length;
+}
+function onMsg(c,m){
+  if(m.t=="join"){
+    if(H.st!="lobby")return c.send({t:"no",why:"That game has already started."});
+    let n=(m.name+"").slice(0,16),b=n,k=2;
+    while(Object.values(players).some(p=>p.name==n))n=b+" "+k++;
+    players[c.peer]={name:n,score:0,c,ans:null};
+    c.send({t:"in",name:n});lobbyUpd();
+  }else if(m.t=="ans"){
+    const p=players[c.peer];
+    if(H.st=="q"&&p&&p.ans==null&&m.a>=0&&m.a<4){
+      p.ans=m.a;p.ms=Date.now()-H.t0;cnt();
+      if(live().every(p=>p.ans!=null))reveal();
+    }
+  }
+}
+function nextQ(){H.i++;H.i>=H.g.qs.length?fin():ask()}
+function opts(q,c){
+  return q.a.map((t,j)=>t.trim()?`<div class="opt c${j}" style="${c&&j!=q.ok?"opacity:.35":""}"><span>${SH[j]}</span><span>${esc(t)}</span>${c?`<b style="margin-left:auto">${c[j]}</b>`:""}</div>`:"").join("");
+}
+function cnt(){
+  const e=$("#cnt");
+  if(e&&H.st=="q")e.textContent=live().filter(p=>p.ans!=null).length+" / "+live().length+" answered";
+}
+function ask(){
+  H.st="q";
+  const q=H.g.qs[H.i],n=H.g.qs.length;
+  Object.values(players).forEach(p=>p.ans=null);
+  H.t0=Date.now();
+  bc({t:"q",i:H.i,n,q:q.q,a:q.a});
+  $("#host").innerHTML=`<p>Question ${H.i+1} of ${n}</p><h2>${esc(q.q)}</h2>
+  ${q.img?`<img src="${q.img}" alt="" style="max-width:100%;max-height:38vh;border-radius:10px">`:""}
+  <div class="row" style="justify-content:space-between"><h1 id="tm">${q.time}</h1><span id="cnt"></span><button class="o" onclick="reveal()">Skip</button></div>
+  <div class="grid">${opts(q)}</div>`;
+  clearInterval(H.tick);
+  H.tick=setInterval(()=>{
+    const l=Math.ceil(q.time-(Date.now()-H.t0)/1000);
+    $("#tm").textContent=Math.max(l,0);
+    if(l<=0)reveal();
+  },250);
+  cnt();
+}
+function reveal(){
+  if(H.st!="q")return;
+  H.st="r";clearInterval(H.tick);
+  const q=H.g.qs[H.i],c=[0,0,0,0];
+  Object.values(players).forEach(p=>{
+    p.d=0;p.ok=p.ans===q.ok;
+    if(p.ans!=null)c[p.ans]++;
+    if(p.ok){p.d=Math.max(100,Math.round(1000*(1-p.ms/1000/q.time/2)));p.score+=p.d}
+  });
+  const r=rank();
+  r.forEach((p,i)=>p.c.open&&p.c.send({t:"r",ok:p.ok,got:p.ans!=null,d:p.d,s:p.score,r:i+1,n:r.length}));
+  $("#host").innerHTML=`<h2>${esc(q.q)}</h2><div class="grid">${opts(q,c)}</div><h2>Leaderboard</h2>${board(5)}
+  <button class="g" onclick="nextQ()">${H.i+1<H.g.qs.length?"Next question":"Finish"}</button>`;
+}
+function fin(){
+  H.st="end";
+  const r=rank();
+  r.forEach((p,i)=>p.c.open&&p.c.send({t:"end",s:p.score,r:i+1,n:r.length}));
+  $("#host").innerHTML=`<h1>Final results</h1>${board(5)}<button class="g" onclick="endHost()">Done</button>`;
+}
+function endHost(){H&&clearInterval(H.tick);peer&&peer.destroy();peer=0;home()}
+
+/* ---------- player ---------- */
+function join(){
+  const code=$("#code").value.trim(),name=$("#nick").value.trim(),j=$("#jmsg");
+  if(!code||!name){j.textContent="Enter a game code and a nickname.";return}
+  j.textContent="Connecting…";over=0;
+  peer&&peer.destroy();
+  peer=new Peer();
+  peer.on("error",e=>j.textContent=e.type=="peer-unavailable"?"No game found with that code.":"Connection error ("+e.type+").");
+  peer.on("open",()=>{
+    pc=peer.connect("kqz-"+code);
+    pc.on("open",()=>pc.send({t:"join",name}));
+    pc.on("data",pmsg);
+    pc.on("close",()=>{if(!over)pscr('<h2>Host disconnected</h2><button onclick="leave()">Home</button>')});
+    setTimeout(()=>{if(!pc.open&&!$("#home").hidden)j.textContent="Could not connect. Check the code and your network."},12000);
+  });
+}
+function pmsg(m){
+  if(m.t=="no"){leave();$("#jmsg").textContent=m.why}
+  else if(m.t=="in")pscr(`<h2>You’re in, ${esc(m.name)}!</h2><p>Watch the host screen…</p>`);
+  else if(m.t=="q")pscr(`<p>Question ${m.i+1} of ${m.n}</p><h3>${esc(m.q)}</h3><div class="grid">${m.a.map((t,j)=>t.trim()?`<button class="opt c${j}" onclick="ans(${j})"><span>${SH[j]}</span><span>${esc(t)}</span></button>`:"").join("")}</div>`);
+  else if(m.t=="r")pscr(`<h1>${m.ok?"✔ Correct!":m.got?"✘ Wrong":"⏱ Too slow"}</h1><h2>+${m.d} points</h2><p>${m.s} total · place ${m.r} of ${m.n}</p>`);
+  else if(m.t=="end"){over=1;pscr(`<h1>Game over</h1><h2>Place ${m.r} of ${m.n}</h2><p>${m.s} points</p><button onclick="leave()">Home</button>`)}
+}
+function ans(j){pc.send({t:"ans",a:j});pscr("<h2>Answer sent!</h2><p>Waiting for the others…</p>")}
+function leave(){over=1;peer&&peer.destroy();peer=0;home()}
+
+/* ---------- start ---------- */
+const m=location.search.match(/code=(\d+)/);
+if(m)$("#code").value=m[1];
+home();
+</script>
+</body>
+</html>
