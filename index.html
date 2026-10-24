@@ -121,14 +121,50 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
  #find{width:100%!important;flex:1 1 100%!important}
  .card{padding:10px}
 }
+/* ---- look & feel v1.3 ---- */
+#bg{position:fixed;inset:0;z-index:-1;background:linear-gradient(160deg,#06303a,#0c1c3d);background-size:cover;background-position:center;overflow:hidden}
+#bg::before,#bg::after{content:"";position:absolute;width:70vmax;height:70vmax;border-radius:50%;opacity:.3;animation:drift 24s ease-in-out infinite alternate}
+#bg::before{background:radial-gradient(circle,var(--c),transparent 65%);left:-25vmax;top:-25vmax}
+#bg::after{background:radial-gradient(circle,var(--a),transparent 65%);right:-30vmax;bottom:-30vmax;animation-delay:-9s}
+#bg.ph::before,#bg.ph::after{display:none}
+@keyframes drift{to{transform:translate(9vmax,6vmax) scale(1.15)}}
+.c0{color:var(--ka,#0b2530)}.c1{color:var(--kb,#0b2530)}.c2{color:var(--kc,#0b2530)}.c3{color:var(--kd,#0b2530)}
+button{color:var(--kc,#0b2530)}button.g{color:var(--kb,#0b2530)}button.r{color:var(--ka,#0b2530)}button.o{color:#effcff}
+.chip{color:var(--kc,#0b2530);display:inline-flex;align-items:center;gap:6px}.badge{color:var(--kd,#0b2530)}
+h1.logo{font-size:clamp(3rem,14vw,5.2rem);font-weight:900;letter-spacing:-.05em;line-height:1;background:linear-gradient(90deg,var(--b),var(--a) 55%,var(--d));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 6px 0 rgba(0,0,0,.25))}
+h2,h3{letter-spacing:-.01em}
+.card{background:rgba(255,255,255,.1);border-radius:20px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 10px 28px rgba(0,0,0,.18)}
+button{border-radius:14px;background-image:linear-gradient(rgba(255,255,255,.3),rgba(255,255,255,0) 60%);box-shadow:0 4px 0 rgba(0,0,0,.28),0 8px 14px rgba(0,0,0,.15)}
+button.o,.em{background-image:none}
+button.o{box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
+.opt{background-image:linear-gradient(rgba(255,255,255,.28),rgba(255,255,255,0) 55%)}
+@media(hover:hover){button:not(:disabled):hover{filter:brightness(1.08)}}
+#mm,#mute,#lg{background:rgba(255,255,255,.12);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:30px}
+.bar{height:12px;border-radius:12px}.bar i{background:linear-gradient(90deg,var(--b),var(--a))}
+#tm{display:inline-grid;place-items:center;min-width:2.1em;height:2.1em;padding:0 .2em;border-radius:50%;border:4px solid var(--b);background:rgba(0,0,0,.2);font-size:1.9rem}
+#tm.hot{border-color:var(--a)}
+.card.row>b:first-child{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--b);color:var(--kb,#0b2530);flex:none}
+.code{text-shadow:0 6px 0 rgba(0,0,0,.25)}
+.part{color:#ffe08a}
+.pie .c0{fill:var(--a)}.pie .c1{fill:var(--b)}.pie .c2{fill:var(--c)}.pie .c3{fill:var(--d)}.pie .c4{fill:#8be0a4}.pie .c5{fill:#ff9ecb}.pie .c6{fill:#ffa94d}.pie .c7{fill:#cfd8e6}
+input[type=color]{width:46px;height:38px;padding:2px;flex:none;cursor:pointer;border-radius:10px}
+input[type=range]{padding:0;background:none;accent-color:var(--b);width:auto;flex:1;min-width:120px}
+details.card summary{cursor:pointer;font-weight:800;font-size:1.05rem}
+.av{display:inline-block;vertical-align:middle;flex:none}
+.avp{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px}
+.avg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.avr{display:flex;align-items:center;justify-content:space-between;gap:4px;background:rgba(255,255,255,.08);border-radius:12px;padding:3px}
+.avr span{flex:1;text-align:center;font-weight:800;font-size:.85rem}.avr small{opacity:.6}
+@media(max-width:380px){.avg{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
+<div id="bg"></div>
 <button id="mm" class="o s" onclick="togMm()" title="Music on/off" aria-label="Music on/off"></button>
 <button id="mute" class="o s" onclick="mute=!mute;LS.setItem('qz_mute',mute?1:0);this.textContent=mute?'🔇':'🔊'" title="Sound effects on/off" aria-label="Sound effects on/off"></button>
 <button id="lg" class="o s" onclick="togLang()" title="Language" aria-label="Language"></button>
 <div id="emo" hidden></div>
-<div id="ver" translate="no">v1.2</div>
+<div id="ver" translate="no">v1.3</div>
 <main>
 <section id="menu" class="mid">
   <h1 class="logo">Quizzy</h1>
@@ -145,7 +181,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <h2>Join a game</h2>
     <div class="row"><input id="code" placeholder="Game code" inputmode="numeric"><input id="nick" placeholder="Nickname" maxlength="16"></div>
     <p><small>Pick your character</small></p>
-    <div id="ems" class="row" style="margin-bottom:8px"></div>
+    <div id="ems" style="margin-bottom:8px"></div>
     <button class="g" onclick="join()">Join</button> <small id="jmsg"></small>
   </div>
   <div id="ended" class="card mid" hidden><div style="font-size:3.5rem">🚪</div><h2 id="emsg"></h2><button class="g" onclick="menu()">Back to menu</button></div>
@@ -170,6 +206,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <button class="o" onclick="home()">Cancel</button>
   </div>
   <p><small>Tick every correct answer. With 2 or more ticked, choose whether any one of them is right or all must be selected. Press Ctrl+V to paste an image into the selected question.</small></p>
+  <details class="card" id="thc"><summary>🎨 Customize look</summary><div id="th"></div></details>
   <div id="qs"></div>
   <button onclick="addQ()">+ Add question</button>
 </section>
@@ -185,7 +222,7 @@ esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"
 LT="ABCDEFGH",KEY="quizzy_games",
 load=()=>{try{const g=JSON.parse(LS.getItem(KEY))||[];g.forEach(x=>x.qs.forEach(q=>{if(!Array.isArray(q.ok))q.ok=[q.ok|0];q.mode=q.mode||(q.ok.length>1?"all":"any")}));return g}catch(e){return[]}},
 save=g=>{try{LS.setItem(KEY,JSON.stringify(g));return 1}catch(e){alert("Browser storage is full. Use fewer or smaller images.")}},
-show=v=>{["menu","join","quizzes","edit","host","play"].forEach(x=>$("#"+x).hidden=x!=v);$("#emo").hidden=1},
+show=v=>{["menu","join","quizzes","edit","host","play"].forEach(x=>$("#"+x).hidden=x!=v);$("#emo").hidden=1;v!="host"&&v!="play"&&theme(v=="edit"?cur.th:null)},
 blank=()=>({q:"",img:"",type:"choice",a:["","","",""],ok:[0],txt:"",tol:1,cs:0,mode:"any",time:20}),
 live=()=>Object.values(players).filter(p=>p.c.open),
 bc=m=>live().forEach(p=>p.c.send(m)),
@@ -198,14 +235,14 @@ const EM=["🐱","🐶","🦊","🐼","🐸","🦄","🐙","🐵","🦁","🐯",
 norm=(s,cs)=>{s=String(s).trim().replace(/\s+/g," ");return cs?s:s.toLowerCase()},
 acc=q=>(q.txt||"").split(",").map(x=>norm(x,q.cs)).filter(Boolean),
 lev=(a,b)=>{let p=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;i++){const c=[i];for(let j=1;j<=b.length;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]==b[j-1]?0:1));p=c}return p[b.length]};
-let mm=LS.getItem("qz_mm")=="1",em=LS.getItem("qz_em")||EM[0],mw=0,mi,bt=0;
+let mm=LS.getItem("qz_mm")=="1",em=LS.getItem("qz_av")||"",mw=0,mi,bt=0;
 let mst=LS.getItem("qz_mus")||"upbeat",X,NB,qt=0;
 const mmUi=()=>{$("#mm").textContent=mm?"🎵 ✕":"🎵"},
 togMm=()=>{mm=!mm;LS.setItem("qz_mm",mm?1:0);mmUi();music(mw)},
 hz=n=>440*2**((n-69)/12),rnd=n=>Math.floor(Math.random()*n),pk=a=>a[rnd(a.length)],
 CT={M:[0,4,7],m:[0,3,7],M7:[0,4,7,11],m7:[0,3,7,10],"7":[0,4,7,10]},ARR=[1,2,3,3,2,3,3,1],
 MO=[["upbeat","Upbeat"],["chill","Chill"],["arcade","Arcade"],["off","No music"]],
-musSel=()=>`<select style="width:auto" title="Music" onchange="setMus(this.value)">${MO.map(([v,l])=>`<option value="${v}" ${v==mst?"selected":""}>${l}</option>`).join("")}</select>`,
+musSel=()=>`<select style="width:auto" title="Music" onchange="setMus(this.value)">${(CM?[MO[0],MO[1],MO[2],["custom","Custom"],MO[3]]:MO).map(([v,l])=>`<option value="${v}" ${v==mst?"selected":""}>${l}</option>`).join("")}</select>`,
 MS={
 upbeat:{bpm:122,rt:48,lo:24,sc:[0,2,4,7,9],sw:0,wet:.18,ln:[1,1,1,2,2,3,4],rp:.2,cm:"stab",lt:"triangle",bt:"triangle",bv:.5,cv:.14,ev:.45,
  pr:[[[0,"M"],[7,"M"],[9,"m"],[5,"M"]],[[0,"M"],[9,"m"],[5,"M"],[7,"M"]],[[5,"M"],[7,"M"],[4,"m"],[9,"m"]],[[0,"M"],[5,"M"],[7,"M"],[5,"M"]]],
@@ -286,9 +323,9 @@ function mtick(){
   while(X.t<AC.currentTime+.6)mstep();
 }
 function music(on){
-  mw=on;clearInterval(mi);mi=0;
+  mw=on;clearInterval(mi);mi=0;if(CA){CA.pause();CA=0}
   if(X){const x=X;X=0;x.out.gain.cancelScheduledValues(0);x.out.gain.setTargetAtTime(0,AC.currentTime,.08);setTimeout(()=>x.out.disconnect(),700)}
-  if(!on||mm||qt||!MS[mst])return;
+  if(!on||mm||qt)return;if(mst=="custom"){if(CM){CA=new Audio(CM);CA.loop=true;CA.volume=.5;CA.play().catch(()=>{})}return}if(!MS[mst])return;
   try{
     AC=AC||new AudioContext();AC.resume();
     const S=MS[mst],out=AC.createGain(),bus=AC.createGain(),dry=AC.createGain(),dl=AC.createDelay(1),fb=AC.createGain(),wt=AC.createGain(),n=AC.currentTime;
@@ -299,15 +336,117 @@ function music(on){
     mi=setInterval(mtick,100);
   }catch(e){X=0}
 }
-function setMus(v){mst=v;H.cfg.mus=v;LS.setItem("qz_mus",v);bc({t:"mus",v});music(mw)}
-function emUi(){$("#ems").innerHTML=EM.map(e=>`<button class="em ${e==em?"on":""}" onclick="em='${e}';LS.setItem('qz_em',em);emUi()">${e}</button>`).join("")}
+function setMus(v){mst=v;H.cfg.mus=v;v!="custom"&&LS.setItem("qz_mus",v);bc({t:"mus",v:v=="custom"?"off":v});music(mw)}
+let CM="",CA;
+const PF=["#ff6f59","#ffc93c","#7bdff2","#b79cff","#8be0a4","#ff9ecb","#ffa94d","#cfd8e6"];
+/* ---------- avatars: 9 parts -> millions of combinations ---------- */
+const AVN=[8,3,8,8,6,6,6,8,8],
+SK=["#ffdbb4","#f1c27d","#e0ac69","#c68642","#8d5524","#5c3a21","#9be3a1","#a5b4ff"],
+HC=["#2b1d14","#6b4226","#a0522d","#e8c35a","#c9c9c9","#d9432b","#3b6fe0","#ff6fb1"],
+AVL=["Skin","Face","Hair","Hair color","Eyes","Mouth","Details","Accessory","Background"],
+avOk=s=>{const a=String(s).split(".");return a.length==9&&a.every((x,i)=>/^\d+$/.test(x)&&+x<AVN[i])},
+rndAv=()=>AVN.map(n=>rnd(n)).join(".");
+function av(s,z=40){
+  if(!avOk(s))s=AVN.map(()=>0).join(".");
+  const [sk,hd,hs,hc,ey,mo,dt,ax,bg]=s.split(".").map(Number),skn=SK[sk],hr=HC[hc],ik="#1b1b2f",bgc=PF[bg],sh=PF[(bg+3)%8],ac2=PF[(bg+5)%8],
+  st=`stroke="${ik}" stroke-width="3" stroke-linecap="round" fill="none"`,dot=(x,y)=>`<circle cx="${x}" cy="${y}" r="3.3" fill="${ik}"/>`,
+  cap='<path d="M21 52Q19 21 50 21Q81 21 79 52Q70 38 50 38Q30 38 21 52Z"/>',
+  head=['<circle cx="50" cy="54" r="30"/>','<ellipse cx="50" cy="54" rx="26" ry="32"/>','<rect x="22" y="25" width="56" height="60" rx="22"/>'][hd],
+  hair=["",cap,cap,'<path d="M20 50L22 20L36 36L44 14L54 34L66 14L70 36L80 22L80 50Q70 36 50 36Q30 36 20 50Z"/>','<circle cx="27" cy="42" r="11"/><circle cx="38" cy="31" r="12"/><circle cx="52" cy="27" r="12"/><circle cx="65" cy="31" r="12"/><circle cx="75" cy="43" r="11"/>',cap+'<circle cx="50" cy="15" r="10"/>','<path d="M40 36Q42 10 50 8Q58 10 60 36Z"/>','<path d="M20 52Q18 22 50 21Q82 22 80 52Q76 40 62 38Q44 44 28 34Q24 42 20 52Z"/>'][hs],
+  D=["",'<g fill="#0000002e"><circle cx="34" cy="62" r="1.6"/><circle cx="40" cy="64" r="1.6"/><circle cx="60" cy="64" r="1.6"/><circle cx="66" cy="62" r="1.6"/><circle cx="37" cy="60" r="1.4"/><circle cx="63" cy="60" r="1.4"/></g>',
+   `<path d="M23 62Q24 90 50 90Q76 90 77 62Q70 78 50 78Q30 78 23 62Z" fill="${hr}"/>`,`<path d="M36 63Q44 56 50 62Q56 56 64 63Q56 61 50 65Q44 61 36 63Z" fill="${hr}"/>`,
+   '<ellipse cx="31" cy="62" rx="6" ry="4" fill="#ff4f7a55"/><ellipse cx="69" cy="62" rx="6" ry="4" fill="#ff4f7a55"/>','<circle cx="63" cy="63" r="2" fill="#5a3a22"/>'][dt],
+  E=[dot(39,52)+dot(61,52),`<g fill="#fff"><circle cx="39" cy="52" r="7"/><circle cx="61" cy="52" r="7"/></g><g fill="${ik}"><circle cx="40" cy="53" r="3.5"/><circle cx="62" cy="53" r="3.5"/></g>`,
+   `<path d="M33 54Q39 46 45 54M55 54Q61 46 67 54" ${st}/>`,`<path d="M33 52H45M55 52H67" ${st}/>`,dot(39,52)+`<path d="M55 53Q61 46 67 53" ${st}/>`,dot(39,53)+dot(61,53)+`<path d="M32 44L46 48M68 44L54 48" ${st}/>`][ey],
+  M=[`<path d="M40 66Q50 76 60 66" ${st}/>`,'<path d="M37 64Q50 84 63 64Z" fill="#7a1f2b"/><path d="M40 65H60Q58 70 50 70Q42 70 40 65Z" fill="#fff"/>',`<path d="M42 70H58" ${st}/>`,
+   `<path d="M40 66Q50 76 60 66" ${st}/><path d="M45 71Q50 83 55 71Z" fill="#ff7b9c"/>`,'<ellipse cx="50" cy="70" rx="5" ry="6.5" fill="#7a1f2b"/>',`<path d="M41 69Q52 71 60 64" ${st}/>`][mo],
+  X=["",`<g fill="none" stroke="${ik}" stroke-width="2.5"><circle cx="39" cy="52" r="9"/><circle cx="61" cy="52" r="9"/><path d="M48 51H52"/></g>`,
+   '<path d="M27 46H73V54Q73 63 62 63Q52 63 50 55Q48 63 38 63Q27 63 27 54Z" fill="#111"/>',`<path d="M19 42Q21 17 50 17Q79 17 81 42Z" fill="${ac2}"/><path d="M68 40H97Q95 47 72 47Z" fill="${ac2}"/>`,
+   '<path d="M30 27L33 8L43 19L50 5L57 19L67 8L70 27Z" fill="#ffd23c" stroke="#c9961a" stroke-width="2" stroke-linejoin="round"/>',`<path d="M50 3L35 30H65Z" fill="${ac2}"/><circle cx="50" cy="4" r="4.5" fill="#fff"/>`,
+   '<path d="M21 54Q21 19 50 19Q79 19 79 54" fill="none" stroke="#222" stroke-width="5"/><rect x="15" y="47" width="12" height="20" rx="6" fill="#222"/><rect x="73" y="47" width="12" height="20" rx="6" fill="#222"/>',
+   `<path d="M20 42Q50 24 80 42" fill="none" stroke="${ac2}" stroke-width="7" stroke-linecap="round"/>`][ax];
+  return `<svg class="av" viewBox="0 0 100 100" style="width:${z}px;height:${z}px" aria-hidden="true"><rect width="100" height="100" rx="24" fill="${bgc}"/><rect x="42" y="74" width="16" height="16" fill="${skn}"/><path d="M12 100Q14 80 50 80Q88 80 88 100Z" fill="${sh}"/>${hs==2?`<path d="M16 60Q11 17 50 17Q89 17 84 60L87 94H13Z" fill="${hr}"/>`:""}<g fill="${skn}"><circle cx="21" cy="56" r="6"/><circle cx="79" cy="56" r="6"/>${head}</g>${D}${E}${M}<g fill="${hr}">${hair}</g>${X}</svg>`;
+}
+if(!avOk(em))em=rndAv();
+LS.setItem("qz_av",em);
+function avs(i,d){const a=em.split(".").map(Number);a[i]=(a[i]+d+AVN[i])%AVN[i];em=a.join(".");LS.setItem("qz_av",em);emUi()}
+function avr(){em=rndAv();LS.setItem("qz_av",em);emUi()}
+function emUi(){
+  const a=em.split(".").map(Number);
+  $("#ems").innerHTML=`<div class="avp">${av(em,110)}<button class="o" onclick="avr()">🎲 Random</button></div><div class="avg">${AVL.map((l,i)=>`<div class="avr"><button class="o s" onclick="avs(${i},-1)">‹</button><span><span>${l}</span> <small>${a[i]+1}/${AVN[i]}</small></span><button class="o s" onclick="avs(${i},1)">›</button></div>`).join("")}</div>`;
+}
+
+/* ---------- confetti ---------- */
+function confetti(){
+  if(matchMedia("(prefers-reduced-motion:reduce)").matches)return;
+  const c=document.createElement("canvas"),x=c.getContext("2d"),W=c.width=innerWidth,V=c.height=innerHeight;
+  c.style.cssText="position:fixed;inset:0;z-index:60;pointer-events:none";document.body.appendChild(c);
+  const L=Array.from({length:Math.min(220,Math.round(W/4))},()=>({x:Math.random()*W,y:-20-Math.random()*V*.6,w:6+Math.random()*7,h:10+Math.random()*8,vx:-2+Math.random()*4,vy:2+Math.random()*4,r:Math.random()*6,vr:-.2+Math.random()*.4,c:pk(PF)}));
+  let t=0;
+  (function f(){
+    x.clearRect(0,0,W,V);t++;
+    L.forEach(p=>{p.x+=p.vx+Math.sin(t/20+p.r);p.y+=p.vy;p.r+=p.vr;x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillStyle=p.c;x.fillRect(-p.w/2,-p.h/2,p.w,p.h);x.restore()});
+    t<300&&L.some(p=>p.y<V+30)?requestAnimationFrame(f):c.remove();
+  })();
+}
+
+/* ---------- themes (per quiz) ---------- */
+const DEF={c:["#ff6f59","#ffc93c","#7bdff2","#b79cff"],b:["#06303a","#0c1c3d"],f:0,i:"",d:45,mus:""},
+FNT=['"Avenir Next Rounded","Nunito","Trebuchet MS",system-ui,sans-serif','Georgia,"Times New Roman",serif','"Courier New",ui-monospace,monospace','"Comic Sans MS","Chalkboard SE",cursive'],
+FNN=["Rounded","Serif","Typewriter","Playful"],
+PRE=[["Ocean","#06303a","#0c1c3d","#ff6f59","#ffc93c","#7bdff2","#b79cff"],["Sunset","#3d1152","#a8324a","#ff7b54","#ffd460","#ffb4a2","#c77dff"],["Forest","#0b2e1f","#173b2a","#ff9f1c","#e9ff70","#7ae582","#2ec4b6"],
+ ["Candy","#ff9bd2","#8d7bff","#ff4d8d","#ffd93d","#6bf0ff","#5b4bff"],["Night","#070a1a","#1b1340","#ff4f81","#ffd166","#06d6a0","#8e7dff"],["Mono","#202225","#40444b","#f25f5c","#ffe066","#70c1b3","#247ba0"]],
+hx=x=>/^#[0-9a-f]{6}$/i.test(x),
+inkFor=c=>{const n=parseInt(c.slice(1),16);return .299*(n>>16)+.587*(n>>8&255)+.114*(n&255)>150?"#0b2530":"#fff"},
+TH=()=>cur.th||(cur.th={...DEF,c:[...DEF.c],b:[...DEF.b]});
+function cleanTh(t){
+  if(!t||typeof t!="object")return undefined;
+  const c=Array.isArray(t.c)?t.c:[],b=Array.isArray(t.b)?t.b:[];
+  return{c:DEF.c.map((d,i)=>hx(c[i])?c[i]:d),b:DEF.b.map((d,i)=>hx(b[i])?b[i]:d),f:Math.min(3,Math.max(0,t.f|0)),
+    d:t.d==null?45:Math.min(85,Math.max(0,+t.d||0)),
+    i:/^data:image\/[a-z+]+;base64,[A-Za-z0-9+\/=]+$/.test(t.i)?t.i:"",mus:/^data:audio\/[a-z0-9.+-]+;base64,[A-Za-z0-9+\/=]+$/.test(t.mus)?t.mus:""};
+}
+function theme(t){
+  t=t?{...DEF,...t}:DEF;
+  const r=document.documentElement.style,g=`linear-gradient(160deg,${t.b[0]},${t.b[1]})`,bg=$("#bg"),o=`rgba(0,0,0,${t.d/100})`;
+  "abcd".split("").forEach((k,i)=>{r.setProperty("--"+k,t.c[i]);r.setProperty("--k"+k,inkFor(t.c[i]))});
+  document.body.style.fontFamily=FNT[t.f]||FNT[0];
+  bg.style.background=t.i?`linear-gradient(${o},${o}),url("${t.i}") center/cover,${g}`:g;
+  bg.classList.toggle("ph",!!t.i);
+}
+function thC(k,i,v){TH()[k][i]=v;theme(cur.th)}
+function thP(i){const p=PRE[i],t=TH();t.b=[p[1],p[2]];t.c=p.slice(3);theme(t);thUi()}
+function thR(){delete cur.th;theme(null);thUi()}
+function rdImg(f,w,cb){
+  const r=new FileReader();
+  r.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,w/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=im.width*s;c.height=im.height*s;c.getContext("2d").drawImage(im,0,0,c.width,c.height);cb(c.toDataURL("image/jpeg",.6))};im.src=r.result};
+  r.readAsDataURL(f);
+}
+function thImg(f){f&&rdImg(f,1000,u=>{TH().i=u;theme(cur.th);thUi()})}
+function thMus(f){
+  if(!f)return;
+  if(f.size>1.5e6)return alert("Music file is too big (max 1.5 MB).");
+  const r=new FileReader();r.onload=()=>{TH().mus=r.result;thUi()};r.readAsDataURL(f);
+}
+function thUi(){
+  const t={...DEF,...(cur.th||{})};
+  $("#th").innerHTML=`<div class="row" style="margin-top:8px">${PRE.map((p,i)=>`<button class="o s" onclick="thP(${i})">${p[0]}</button>`).join("")}</div>
+  <div class="row" style="margin:10px 0"><span>Background</span>${[0,1].map(i=>`<input type="color" value="${t.b[i]}" oninput="thC('b',${i},this.value)">`).join("")}<span style="margin-left:10px">Answer colors</span>${[0,1,2,3].map(i=>`<input type="color" value="${t.c[i]}" oninput="thC('c',${i},this.value)">`).join("")}</div>
+  <label class="row" style="margin:10px 0">Font <select style="width:auto" onchange="TH().f=+this.value;theme(cur.th)">${FNN.map((n,i)=>`<option value="${i}" ${t.f==i?"selected":""}>${n}</option>`).join("")}</select></label>
+  <div class="row" style="margin:10px 0"><span>Background photo</span>${t.i?`<img src="${t.i}" alt="" style="height:44px;border-radius:8px"><button class="o s" onclick="TH().i='';theme(cur.th);thUi()">Remove image</button>`:""}<input type="file" accept="image/*" onchange="thImg(this.files[0])"></div>
+  ${t.i?`<label class="row">Photo darkness <input type="range" min="0" max="85" value="${t.d}" oninput="TH().d=+this.value;theme(cur.th)"></label>`:""}
+  <div class="row" style="margin:10px 0"><span>Custom music</span>${t.mus?`<span class="badge">🎵 Added</span><button class="o s" onclick="TH().mus='';thUi()">Remove</button>`:""}<input type="file" accept="audio/*" onchange="thMus(this.files[0])"></div>
+  <p><small>Custom music plays on the host’s device (max 1.5 MB).</small></p>
+  <button class="o s" onclick="thR()">Reset look</button>`;
+}
+addEventListener("pointerdown",()=>{CA&&CA.paused&&CA.play().catch(()=>{})});
 emUi();
-function rows(l,f=0){return l.slice(f).map((p,i)=>`<div class="card row" style="animation:rise .4s ${i*.1}s backwards"><b>${i+f+1}</b><span style="font-size:1.6rem">${p.e}</span><span style="flex:1;text-align:left">${esc(p.n)}</span><b>${p.s}</b></div>`).join("")}
+function rows(l,f=0){return l.slice(f).map((p,i)=>`<div class="card row" style="animation:rise .4s ${i*.1}s backwards"><b>${i+f+1}</b>${av(p.e,34)}<span style="flex:1;text-align:left">${esc(p.n)}</span><b>${p.s}</b></div>`).join("")}
 function lb(n){return rank().slice(0,n).map(p=>({n:p.name,e:p.e,s:p.score}))}
-function podium(l){return `<div class="pod">${[1,0,2].map(i=>l[i]?`<div class="pc"><div style="font-size:2.4rem">${l[i].e}</div><b>${esc(l[i].n)}</b><small>${l[i].s}</small><div class="pb c${[1,2,0][i]}" style="height:${[120,85,60][i]}px;animation:grow .8s ${.2+(2-i)*.4}s backwards">${i+1}</div></div>`:"").join("")}</div>`}
+function podium(l){return `<div class="pod">${[1,0,2].map(i=>l[i]?`<div class="pc"><div>${av(l[i].e,64)}</div><b>${esc(l[i].n)}</b><small>${l[i].s}</small><div class="pb c${[1,2,0][i]}" style="height:${[120,85,60][i]}px;animation:grow .8s ${.2+(2-i)*.4}s backwards">${i+1}</div></div>`:"").join("")}</div>`}
 
 /* ---------- sound ---------- */
-const NOTES={tick:[[880,.05]],click:[[600,.04]],pop:[[520,.06],[780,.08]],join:[[660,.08],[880,.12]],go:[[392,.1],[523,.1],[659,.1],[784,.25]],ok:[[523,.1],[659,.1],[784,.25]],no:[[260,.15],[196,.3]],end:[[523,.15],[659,.15],[784,.15],[1047,.4]]};
+const NOTES={tick:[[880,.05]],click:[[600,.04]],pop:[[520,.06],[780,.08]],join:[[660,.08],[880,.12]],go:[[392,.1],[523,.1],[659,.1],[784,.25]],ok:[[523,.1],[659,.1],[784,.25]],no:[[260,.15],[196,.3]],end:[[523,.15],[659,.15],[784,.15],[1047,.4]],win:[[523,.1],[523,.1],[523,.1],[659,.16],[784,.1],[659,.1],[784,.1],[1047,.14],[784,.1],[1047,.1],[1319,.55]]};
 function sfx(k){
   if(mute||qt)return;
   try{
@@ -359,7 +498,7 @@ function exp(id){
 }
 function clean(o){
   if(!o||!Array.isArray(o.qs)||!o.qs.length)throw 0;
-  return{id:""+Date.now()+Math.floor(Math.random()*1e3),title:String(o.title||"Imported quiz").slice(0,80),
+  return{id:""+Date.now()+Math.floor(Math.random()*1e3),title:String(o.title||"Imported quiz").slice(0,80),th:cleanTh(o.th),
     qs:o.qs.slice(0,100).map(q=>{
       const a=(Array.isArray(q.a)?q.a:[]).slice(0,8).map(x=>String(x||"").slice(0,100));
       while(a.length<2)a.push("");
@@ -377,7 +516,7 @@ function add(o){
 }
 function imp(f){if(f)f.text().then(t=>add(JSON.parse(t))).catch(()=>alert("That is not a valid Quizzy quiz."))}
 function share(id){
-  const g=load().find(x=>x.id==id),o={title:g.title,qs:g.qs.map(q=>({...q,img:""}))},
+  const g=load().find(x=>x.id==id),o={title:g.title,th:g.th&&{...g.th,i:"",mus:""},qs:g.qs.map(q=>({...q,img:""}))},
   u=location.href.split(/[?#]/)[0]+"#import="+btoa(unescape(encodeURIComponent(JSON.stringify(o))));
   (navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(
     ()=>alert("Link copied. It carries the questions and answers. To include images, send an exported file instead."),
@@ -387,7 +526,7 @@ function share(id){
 /* ---------- editor ---------- */
 function edit(id){
   cur=id?JSON.parse(JSON.stringify(load().find(x=>x.id==id))):{id:""+Date.now(),title:"",qs:[blank()]};
-  fq=undefined;show("edit");ed();
+  fq=undefined;show("edit");ed();thUi();
 }
 const ind=q=>q.type=="text"?"✎ Typed answer":q.ok.length<2?"◉ One right answer":q.mode=="all"?"☑ All ticked must be selected":"◉ Any ticked answer is right";
 function ed(){
@@ -458,9 +597,9 @@ function saveQ(){
 }
 
 /* ---------- host (runs on this device) ---------- */
-function hostGame(id){
-  H={g:load().find(x=>x.id==id),i:-1,cfg:{shuf:0,speed:1,lb:1,chart:1,time:0,streak:0,pen:0,lim:0,auto:0,emo:1,max:0,po:0,mus:LS.getItem("qz_mus")||"upbeat"}};mst=H.cfg.mus;
-  players={};mk(0);
+function hostGame(id){CM=(load().find(x=>x.id==id).th||{}).mus||"";
+  H={g:load().find(x=>x.id==id),i:-1,cfg:{shuf:0,speed:1,lb:1,chart:1,part:1,hint:0,time:0,streak:0,pen:0,lim:0,auto:0,emo:1,max:0,po:0,mus:CM?"custom":LS.getItem("qz_mus")||"upbeat"}};mst=H.cfg.mus;
+  players={};H.th=H.g.th?{...H.g.th,mus:""}:0;theme(H.g.th);mk(0);
 }
 function mk(n){
   const code=""+(100000+Math.floor(Math.random()*900000));
@@ -485,7 +624,7 @@ function lobby(){
   <div id="pl"></div>
   <div class="card" style="text-align:left"><b>Game settings</b>
     ${ck("shuf","Shuffle question order")}${ck("speed","Faster answers earn more points")}${ck("streak","Streak bonus for answering correctly in a row")}
-    ${ck("pen","Lose points for wrong answers")}${ck("lb","Show leaderboard after each question")}${ck("chart","Show answer results as a pie or bar chart")}${ck("auto","Go to the next question automatically")}${ck("emo","Allow player reactions")}
+    ${ck("pen","Lose points for wrong answers")}${ck("lb","Show leaderboard after each question")}${ck("chart","Show answer results as a pie or bar chart")}${ck("part","Partial points for multi-select (picking extra wrong answers costs more)")}${ck("hint","Tell players how many answers to select")}${ck("auto","Go to the next question automatically")}${ck("emo","Allow player reactions")}
     ${sel("time","Time per question",[[0,"As set in the quiz"],...[10,20,30,60].map(t=>[t,t+" seconds for all"])])}
     ${sel("lim","Number of questions",[[0,"All"],5,10,20].map(t=>t.length?t:[t,t]))}
     ${sel("max","Player limit",[[0,"No limit"],...[5,10,25,50].map(t=>[t,t])])}
@@ -499,7 +638,7 @@ function lobby(){
 function lobbyUpd(){
   const l=$("#pl");if(!l||H.st!="lobby")return;
   const a=live();
-  l.innerHTML=a.map(p=>`<span class="chip">${p.e} ${esc(p.name)}</span>`).join("")||"<p>Waiting for players…</p>";
+  l.innerHTML=a.map(p=>`<span class="chip">${av(p.e,26)} ${esc(p.name)}</span>`).join("")||"<p>Waiting for players…</p>";
   $("#go").disabled=!a.length;
 }
 function onMsg(c,m){
@@ -510,8 +649,8 @@ function onMsg(c,m){
     if(H.cfg.max&&Object.keys(players).length>=H.cfg.max)return c.send({t:"no",why:"This game is full."});
     let n=(m.name+"").slice(0,16),b=n,k=2;
     while(Object.values(players).some(p=>p.name==n))n=b+" "+k++;
-    players[c.peer]={name:n,e:EM.includes(m.e)?m.e:EM[0],score:0,c,ans:null};
-    c.send({t:"in",name:n,mus:H.cfg.mus,po:H.cfg.po});sfx("join");lobbyUpd();
+    players[c.peer]={name:n,e:avOk(m.e)?m.e:rndAv(),score:0,c,ans:null};
+    c.send({t:"in",name:n,mus:H.cfg.mus=="custom"?"off":H.cfg.mus,po:H.cfg.po,th:H.th});sfx("join");lobbyUpd();
   }else if(m.t=="ans"){
     const q=H.g.qs[H.i]||{},p=players[c.peer],a=q.type=="text"?(typeof m.a=="string"?m.a.trim().slice(0,40):""):Array.isArray(m.a)?[...new Set(m.a.filter(x=>Number.isInteger(x)&&x>=0&&x<(q.a||[]).length))]:[];
     if(H.st=="q"&&p&&p.ans==null&&a.length){
@@ -540,9 +679,9 @@ function ask(){
   H.st="q";
   const q=H.g.qs[H.i],n=H.g.qs.length,t=H.cfg.time||q.time,mu=q.ok.length>1&&q.mode=="all";
   H.t=t;Object.values(players).forEach(p=>p.ans=null);H.t0=Date.now();
-  bc({t:"q",i:H.i,n,q:q.q,a:q.a,time:t,multi:mu,type:q.type,img:q.img});sfx("go");
+  bc({t:"q",i:H.i,n,q:q.q,a:q.a,time:t,multi:mu,need:H.cfg.hint&&mu?q.ok.length:0,type:q.type,img:q.img});sfx("go");
   $("#host").innerHTML=`<div class="bar"><i style="animation-duration:${t}s"></i></div>
-  <p>Question ${H.i+1} of ${n} ${q.type=="text"?'<span class="badge">type the answer</span>':mu?'<span class="badge">select all that apply</span>':""}</p><h2>${esc(q.q)}</h2>
+  <p>Question ${H.i+1} of ${n} ${q.type=="text"?'<span class="badge">type the answer</span>':mu?`<span class="badge">${H.cfg.hint?"select "+q.ok.length:"select all that apply"}</span>`:""}</p><h2>${esc(q.q)}</h2>
   ${q.img?`<img src="${esc(q.img)}" alt="" style="max-width:100%;max-height:34vh;border-radius:14px">`:""}
   <div class="row" style="justify-content:space-between"><h1 id="tm">${t}</h1><span id="cnt"></span><span class="row">${musSel()}<button class="o" onclick="reveal()">Skip</button></span></div>
   ${q.type=="text"?"<h3>Type your answer on your device</h3>":`<div class="grid">${opts(q)}</div>`}`;
@@ -553,15 +692,15 @@ function reveal(){
   H.st="r";clearInterval(tk);sfx("pop");
   const q=H.g.qs[H.i],tx=q.type=="text",ac=acc(q),c=q.a.map(()=>0),cf=H.cfg;
   Object.values(players).forEach(p=>{
-    if(tx){const v=p.ans?norm(p.ans,q.cs):"";p.ok=!!v&&ac.some(x=>lev(x,v)<=Math.min(q.tol??1,Math.max(0,x.length-1)))}
-    else{const s=p.ans||[];p.ok=q.mode=="all"?s.length==q.ok.length&&q.ok.every(x=>s.includes(x)):s.some(x=>q.ok.includes(x));s.forEach(x=>c[x]++)}
+    if(tx){p.f=0;const v=p.ans?norm(p.ans,q.cs):"";p.ok=!!v&&ac.some(x=>lev(x,v)<=Math.min(q.tol??1,Math.max(0,x.length-1)))}
+    else{const s=p.ans||[];p.ok=q.mode=="all"?s.length==q.ok.length&&q.ok.every(x=>s.includes(x)):s.some(x=>q.ok.includes(x));s.forEach(x=>c[x]++);p.f=0;if(q.mode=="all"&&cf.part&&!p.ok&&s.length){const r=s.filter(x=>q.ok.includes(x)).length;p.f=Math.max(0,(r-1.5*(s.length-r))/q.ok.length)}}
     p.d=0;
-    if(p.ok){p.st=(p.st||0)+1;p.d=(cf.speed?Math.max(100,Math.round(1000*(1-p.ms/1000/H.t/2))):1000)+(cf.streak?Math.min(p.st-1,5)*100:0)}
+    const bs=cf.speed?Math.max(100,Math.round(1000*(1-p.ms/1000/H.t/2))):1000;if(p.ok){p.st=(p.st||0)+1;p.d=bs+(cf.streak?Math.min(p.st-1,5)*100:0)}else if(p.f>0){p.st=0;p.d=Math.round(bs*p.f)}
     else{p.st=0;if(cf.pen&&p.ans!=null)p.d=-Math.min(p.score,300)}
     p.score+=p.d;
   });
   const r=rank(),L=cf.lb?lb(5):0,hit=r.filter(p=>p.ok).length,ch=cf.chart?results(q,tx,q.ok.length>1&&q.mode=="all",c):"";
-  r.forEach((p,i)=>p.c.open&&p.c.send({t:"r",ok:p.ok,got:p.ans!=null,d:p.d,s:p.score,r:i+1,n:r.length,ca:tx?q.txt:"",lb:L}));
+  r.forEach((p,i)=>p.c.open&&p.c.send({t:"r",ok:p.ok,f:p.f,got:p.ans!=null,d:p.d,s:p.score,r:i+1,n:r.length,ca:tx?q.txt:"",lb:L}));
   $("#host").innerHTML=`<h2>${esc(q.q)}</h2>
   ${tx?`<div class="card"><p>Accepted answers</p><h1>${esc(q.txt)}</h1><p>${hit} of ${r.length} got it right</p></div>${ch}`:ch||`<div class="grid">${opts(q,c)}</div>`}
   ${L?"<h2>Leaderboard</h2>"+board(5):""}
@@ -569,15 +708,14 @@ function reveal(){
   if(cf.auto)H.at=setTimeout(()=>{if(H.st=="r")nextQ()},6000);
 }
 /* pie when every player gave exactly one answer and there are few slices; bars for multi-select, many options or many typed answers */
-const PF=["#ff6f59","#ffc93c","#7bdff2","#b79cff","#8be0a4","#ff9ecb","#ffa94d","#cfd8e6"];
 function pieSVG(it,tot){
   const sl=it.filter(x=>x.n>0),pt=(r,t)=>[(100+r*Math.cos(t)).toFixed(2),(100+r*Math.sin(t)).toFixed(2)];
   let a=-Math.PI/2,p="",t="";
   sl.forEach(x=>{
-    const f=PF[x.c%8],w=x.n/tot*2*Math.PI;
-    if(sl.length==1){p=`<circle cx="100" cy="100" r="92" fill="${f}"/>`;t=`<text x="100" y="100">100%</text>`;return}
+    const w=x.n/tot*2*Math.PI;
+    if(sl.length==1){p=`<circle cx="100" cy="100" r="92" class="c${x.c%8}"/>`;t=`<text x="100" y="100">100%</text>`;return}
     const [x1,y1]=pt(92,a),[x2,y2]=pt(92,a+w),[tx,ty]=pt(58,a+w/2);
-    p+=`<path d="M100 100L${x1} ${y1}A92 92 0 ${w>Math.PI?1:0} 1 ${x2} ${y2}Z" fill="${f}"/>`;
+    p+=`<path d="M100 100L${x1} ${y1}A92 92 0 ${w>Math.PI?1:0} 1 ${x2} ${y2}Z" class="c${x.c%8}"/>`;
     if(x.n/tot>=.07)t+=`<text x="${tx}" y="${ty}">${Math.round(x.n/tot*100)}%</text>`;
     a+=w;
   });
@@ -607,7 +745,7 @@ function results(q,tx,mu,c){
     :`<div class="card chart">${cap}${mu?`<p class="cap">Players could select several answers</p>`:""}<div class="bars">${it.map(x=>`<div class="br${x.d&&!x.ok?" no":""}"><div class="bt">${lab(x)}</div>${num(x)}<div class="tr"><i class="c${x.c}" style="width:${x.n/tot*100}%"></i></div></div>`).join("")}</div></div>`;
 }
 function fin(){
-  H.st="end";sfx("end");music(0);
+  H.st="end";music(0);setTimeout(()=>{if(rank().length){sfx("win");confetti()}},900);
   const r=rank(),top=lb(3);
   r.forEach((p,i)=>p.c.open&&p.c.send({t:"end",s:p.score,r:i+1,n:r.length,top}));
   $("#host").innerHTML=`<h1>Final results</h1>${podium(top)}${board(8,3)}<p><button class="g" onclick="endHost()">Done</button></p>`;
@@ -618,7 +756,7 @@ function endHost(){clearInterval(tk);H&&clearTimeout(H.at);peer&&peer.destroy();
 function join(){
   const code=$("#code").value.trim(),name=$("#nick").value.trim(),j=$("#jmsg");
   if(!code||!name){j.textContent="Enter a game code and a nickname.";return}
-  j.textContent="Connecting…";over=0;emoOn=0;
+  j.textContent="Connecting…";over=0;emoOn=0;CM="";
   peer&&peer.destroy();
   peer=new Peer();
   peer.on("error",e=>j.textContent=e.type=="peer-unavailable"?"No game found with that code.":"Connection error ("+e.type+").");
@@ -634,24 +772,24 @@ function pmsg(m){
   if(m.t=="no"){leave();show("join");$("#jmsg").textContent=m.why}
   else if(m.t=="cfg"){emoOn=m.emo;const q=m.po?0:1;if(q!=qt){qt=q;music(1)}}
   else if(m.t=="mus"){mst=m.v;music(mw)}
-  else if(m.t=="in"){qt=m.po?0:1;if(m.mus)mst=m.mus;sfx("join");music(1);pscr(`<div style="font-size:5rem;animation:bounce .6s">${em}</div><h2>You’re in, ${esc(m.name)}!</h2><p>Watch the host screen…</p>`)}
+  else if(m.t=="in"){qt=m.po?0:1;if(m.mus)mst=m.mus;theme(cleanTh(m.th));sfx("join");music(1);pscr(`<div style="animation:bounce .6s">${av(em,112)}</div><h2>You’re in, ${esc(m.name)}!</h2><p>Watch the host screen…</p>`)}
   else if(m.t=="q"){
     pick=[];multi=m.multi;sfx("pop");
     pscr(`<div class="bar"><i style="animation-duration:${m.time}s"></i></div><p>Question ${m.i+1} of ${m.n}</p><h1 id="tm">${m.time}</h1><h3>${esc(m.q)}</h3>
     ${m.img?`<img src="${esc(m.img)}" alt="" style="max-width:100%;max-height:30vh;border-radius:14px">`:""}
     ${m.type=="text"?`<p><input id="ta" maxlength="40" autocomplete="off" placeholder="Type your answer" style="font-size:1.4rem;text-align:center" onkeydown="if(event.key=='Enter')sendT()"></p><button class="g" onclick="sendT()">Submit answer</button>`
-    :`${m.multi?'<p><span class="badge">select all that apply</span></p>':""}
+    :`${m.multi?`<p><span class="badge">${m.need?"select "+m.need:"select all that apply"}</span></p>`:""}
     <div class="grid">${m.a.map((t,j)=>t.trim()?`<button class="opt c${j}" id="o${j}" style="animation-delay:${j*.07}s" onclick="tap(${j})"><span class="l">${LT[j]}</span><span>${esc(t)}</span></button>`:"").join("")}</div>
     ${m.multi?'<p><button class="g" onclick="submit()">Submit answer</button></p>':""}`}`);
     clock(m.time);
   }else if(m.t=="r"){
-    clearInterval(tk);sfx(m.ok?"ok":"no");
-    pscr(`<div class="${m.ok?"good":"bad"}"><div style="font-size:5rem;animation:${m.ok?"bounce":"shake"} .6s">${m.ok?"🎉":m.got?"💥":"⏰"}</div>
-    <h1>${m.ok?"Correct!":m.got?"Not quite":"Too slow"}</h1>${m.ca&&!m.ok?`<p>Answer: <b>${esc(m.ca)}</b></p>`:""}<h2>${m.d>0?"+":""}${m.d} points</h2><p>${em} ${m.s} total · place ${m.r} of ${m.n}</p></div>
+    clearInterval(tk);sfx(m.ok?"ok":m.f>0?"pop":"no");
+    pscr(`<div class="${m.ok?"good":m.f>0?"part":"bad"}"><div style="font-size:5rem;animation:${m.ok||m.f>0?"bounce":"shake"} .6s">${m.ok?"🎉":m.f>0?"🙂":m.got?"💥":"⏰"}</div>
+    <h1>${m.ok?"Correct!":m.f>0?"Partly right":m.got?"Not quite":"Too slow"}</h1>${m.ca&&!m.ok?`<p>Answer: <b>${esc(m.ca)}</b></p>`:""}<h2>${m.d>0?"+":""}${m.d} points</h2><p>${av(em,30)} ${m.s} total · place ${m.r} of ${m.n}</p></div>
     ${m.lb?"<h3>Leaderboard</h3>"+rows(m.lb):""}`);
   }else if(m.t=="end"){
-    over=1;clearInterval(tk);sfx("end");music(0);
-    pscr(`<h1>Game over</h1>${podium(m.top)}<h2>${em} You: place ${m.r} of ${m.n}</h2><p>${m.s} points</p><button onclick="leave()">Home</button>`);
+    over=1;clearInterval(tk);music(0);m.r==1&&m.s>0?(sfx("win"),confetti()):sfx("end");
+    pscr(`<h1>Game over</h1>${podium(m.top)}<h2>${av(em,34)} You: place ${m.r} of ${m.n}</h2><p>${m.s} points</p><button onclick="leave()">Home</button>`);
   }
 }
 function send(a){pc.send({t:"ans",a});clearInterval(tk);pscr("<h2>Answer sent!</h2><p>Waiting for the others…</p>")}
@@ -873,6 +1011,35 @@ Tap anywhere to close|Atinge oriunde pentru a închide
 Show answer results as a pie or bar chart|Arată rezultatele răspunsurilor ca grafic circular sau cu bare
 Other|Altele
 Players could select several answers|Jucătorii puteau alege mai multe răspunsuri
+Partial points for multi-select (picking extra wrong answers costs more)|Puncte parțiale la alegere multiplă (răspunsurile greșite în plus costă mai mult)
+Tell players how many answers to select|Spune jucătorilor câte răspunsuri să aleagă
+Partly right|Parțial corect
+Custom|Personalizat
+🎨 Customize look|🎨 Personalizează aspectul
+Background|Fundal
+Answer colors|Culorile răspunsurilor
+Font|Font
+Rounded|Rotunjit
+Serif|Cu serife
+Typewriter|Mașină de scris
+Playful|Jucăuș
+Background photo|Fotografie de fundal
+Photo darkness|Întunecarea fotografiei
+Custom music|Muzică personalizată
+🎵 Added|🎵 Adăugat
+Remove|Elimină
+Reset look|Resetează aspectul
+Custom music plays on the host’s device (max 1.5 MB).|Muzica personalizată se aude pe dispozitivul gazdei (max 1,5 MB).
+Music file is too big (max 1.5 MB).|Fișierul de muzică este prea mare (max 1,5 MB).
+🎲 Random|🎲 Aleatoriu
+Skin|Piele
+Face|Față
+Hair|Păr
+Hair color|Culoare păr
+Eyes|Ochi
+Mouth|Gură
+Details|Detalii
+Accessory|Accesoriu
 Players also hear music and sounds on their own devices|Jucătorii aud muzica și sunetele și pe propriile dispozitive`.split("\n").map(l=>l.split("|")));
 const RU=[
 [/^Question (\d+) of (\d+)$/,m=>`Întrebarea ${m[1]} din ${m[2]}`],
@@ -882,6 +1049,7 @@ const RU=[
 [/^(\d+) of (\d+) got it right$/,m=>`${m[1]} din ${m[2]} au răspuns corect`],
 [/^You’re in, (.*)!$/,m=>`Ai intrat, ${m[1]}!`],
 [/^Answer ([A-H])$/,m=>"Răspuns "+m[1]],
+[/^select (\d+)$/,m=>"alege "+m[1]],
 [/^(.*) · (\d+)s$/,m=>tr(m[1])+" · "+m[2]+"s"],
 [/^([+-]?\d+) points$/,m=>m[1]+" puncte"],
 [/^(.*?)(\d+) total · place (\d+) of (\d+)$/,m=>`${m[1]}${m[2]} total · locul ${m[3]} din ${m[4]}`],
