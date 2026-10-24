@@ -312,4 +312,525 @@ function clean(o){
   if(!o||!Array.isArray(o.qs)||!o.qs.length)throw 0;
   return{id:""+Date.now()+Math.floor(Math.random()*1e3),title:String(o.title||"Imported quiz").slice(0,80),
     qs:o.qs.slice(0,100).map(q=>{
-      const a=(Array.is
+      const a=(Array.isArray(q.a)?q.a:[]).slice(0,8).map(x=>String(x||"").slice(0,100));
+      while(a.length<2)a.push("");
+      const ok=(x=>x.length?x:[0])([...new Set((Array.isArray(q.ok)?q.ok:[q.ok]).map(Number).filter(x=>x>=0&&x<a.length))]);
+      return{q:String(q.q||"").slice(0,200),img:/^data:image\//.test(q.img)?q.img:"",type:q.type=="text"?"text":"choice",a,ok,
+        mode:q.mode=="any"||(q.mode!="all"&&ok.length<2)?"any":"all",cs:!!q.cs,
+        txt:String(q.txt||"").slice(0,200),tol:Math.min(9,Math.max(0,Math.round(+q.tol)||0)),
+        time:Math.min(300,Math.max(5,Math.round(+q.time)||20))}})};
+}
+function add(o){
+  try{
+    const q=clean(o);
+    if(confirm("Add the quiz “"+q.title+"” ("+q.qs.length+" questions)?")){const g=load();g.push(q);if(save(g))home()}
+  }catch(e){alert("That is not a valid Quizzy quiz.")}
+}
+function imp(f){if(f)f.text().then(t=>add(JSON.parse(t))).catch(()=>alert("That is not a valid Quizzy quiz."))}
+function share(id){
+  const g=load().find(x=>x.id==id),o={title:g.title,qs:g.qs.map(q=>({...q,img:""}))},
+  u=location.href.split(/[?#]/)[0]+"#import="+btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+  (navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(
+    ()=>alert("Link copied. It carries the questions and answers. To include images, send an exported file instead."),
+    ()=>prompt("Copy this link:",u));
+}
+
+/* ---------- editor ---------- */
+function edit(id){
+  cur=id?JSON.parse(JSON.stringify(load().find(x=>x.id==id))):{id:""+Date.now(),title:"",qs:[blank()]};
+  fq=undefined;show("edit");ed();
+}
+const ind=q=>q.type=="text"?"✎ Typed answer":q.ok.length<2?"◉ One right answer":q.mode=="all"?"☑ All ticked must be selected":"◉ Any ticked answer is right";
+function ed(){
+  $("#t").value=cur.title;
+  $("#qs").innerHTML=cur.qs.map((q,i)=>`<div class="card" onpointerdown="fq=${i}" onfocusin="fq=${i}">
+    <div class="row"><button class="o s" onclick="cur.qs[${i}].c=!cur.qs[${i}].c;ed()" aria-label="Collapse or expand">${q.c?"▸":"▾"}</button><b>${i+1}</b>
+      <input placeholder="Question" value="${esc(q.q)}" oninput="cur.qs[${i}].q=this.value">
+      ${q.c?`<small>${ind(q)} · ${q.time}s</small>`:""}</div>
+    ${q.c?"":`<div class="row" style="margin:8px 0">
+      <select style="width:auto" onchange="cur.qs[${i}].type=this.value;ed()"><option value="choice">Pick an answer</option><option value="text" ${q.type=="text"?"selected":""}>Type the answer</option></select>
+      <span class="badge" id="mb${i}">${ind(q)}</span>${q.type!="text"&&q.ok.length>1?`<select style="width:auto" onchange="cur.qs[${i}].mode=this.value;ed()"><option value="any">Any ticked is right</option><option value="all" ${q.mode=="all"?"selected":""}>All ticked required</option></select>`:""}
+      <label class="row" style="gap:4px"><input type="number" min="5" max="300" value="${q.time}" oninput="cur.qs[${i}].time=+this.value"> sec</label>
+      <button class="r s" style="margin-left:auto" onclick="cur.qs.splice(${i},1);ed()">Delete</button></div>
+    <div class="row" style="margin-bottom:8px">
+      ${q.img?`<img src="${esc(q.img)}" alt="" style="height:70px;border-radius:8px"><button class="o s" onclick="cur.qs[${i}].img='';ed()">Remove image</button>`:""}
+      <input type="file" accept="image/*" onchange="pic(${i},this.files[0])"><small>or paste with Ctrl+V</small></div>
+    ${q.type=="text"?`<label>Accepted answers, separated by commas<input value="${esc(q.txt)}" oninput="cur.qs[${i}].txt=this.value"></label>
+      <label class="row" style="margin-top:8px"><input type="checkbox" ${q.cs?"checked":""} onchange="cur.qs[${i}].cs=this.checked"> Case sensitive</label>
+      <label class="row" style="margin-top:8px">Allowed typos <input type="number" min="0" max="9" value="${q.tol??1}" oninput="cur.qs[${i}].tol=+this.value"> letters wrong, missing or extra</label>`
+    :`<div class="grid">${q.a.map((a,j)=>`<label class="at c${j}">
+      <input type="checkbox" title="Correct answer" ${q.ok.includes(j)?"checked":""} onchange="tog(${i},${j},this.checked)">
+      <input placeholder="Answer ${LT[j]}" value="${esc(a)}" oninput="cur.qs[${i}].a[${j}]=this.value">
+      ${q.a.length>2?`<button class="s" style="background:var(--ink);color:#fff" onclick="rmA(${i},${j})" aria-label="Remove answer">✕</button>`:""}</label>`).join("")}</div>
+      ${q.a.length<8?`<p><button class="o s" onclick="cur.qs[${i}].a.push('');ed()">+ Add answer</button></p>`:""}`}`}
+  </div>`).join("");
+}
+function rmA(i,j){
+  const q=cur.qs[i];
+  q.a.splice(j,1);q.ok=q.ok.filter(x=>x!=j).map(x=>x>j?x-1:x);
+  if(!q.ok.length)q.ok=[0];
+  ed();
+}
+function tog(i,j,on){
+  const q=cur.qs[i];
+  q.ok=on?[...new Set([...q.ok,j])]:q.ok.filter(x=>x!=j);
+  ed();
+}
+function addQ(){cur.qs.push(blank());ed();scrollTo(0,document.body.scrollHeight)}
+function pic(i,f){
+  if(!f||!cur.qs[i])return;
+  const r=new FileReader();
+  r.onload=()=>{const im=new Image();
+    im.onload=()=>{const s=Math.min(1,480/im.width),c=document.createElement("canvas");
+      c.width=im.width*s;c.height=im.height*s;c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+      cur.qs[i].img=c.toDataURL("image/jpeg",.7);ed()};
+    im.src=r.result};
+  r.readAsDataURL(f);
+}
+addEventListener("paste",e=>{
+  if($("#edit").hidden)return;
+  const it=[...e.clipboardData.items].find(x=>x.type.startsWith("image/"));
+  if(it){e.preventDefault();pic(fq??cur.qs.length-1,it.getAsFile())}
+});
+function saveQ(){
+  if(!cur.title.trim())return alert("Give your quiz a title.");
+  if(!cur.qs.length)return alert("Add at least one question.");
+  for(const [i,q] of cur.qs.entries()){
+    q.time=Math.min(300,Math.max(5,Math.round(q.time)||20));
+    q.tol=Math.min(9,Math.max(0,Math.round(q.tol??1)||0));
+    const text=q.type=="text",
+    bad=!q.q.trim()||(text?!acc(q).length:q.a.filter(x=>x.trim()).length<2||!q.ok.length||q.ok.some(j=>!q.a[j].trim()));
+    if(bad)return alert("Question "+(i+1)+" is incomplete. Add the question text and "+(text?"at least one accepted answer.":"at least 2 answers, with every ticked answer filled in."));
+  }
+  cur.qs.forEach(q=>delete q.c);
+  const g=load(),k=g.findIndex(x=>x.id==cur.id);
+  k<0?g.push(cur):g[k]=cur;
+  if(save(g))home();
+}
+
+/* ---------- host (runs on this device) ---------- */
+function hostGame(id){
+  H={g:load().find(x=>x.id==id),i:-1,cfg:{shuf:0,speed:1,lb:1,time:0,streak:0,pen:0,lim:0,auto:0,emo:1,max:0,mus:LS.getItem("qz_mus")||"upbeat"}};mst=H.cfg.mus;
+  players={};mk(0);
+}
+function mk(n){
+  const code=""+(100000+Math.floor(Math.random()*900000));
+  H.code=code;peer=new Peer("kqz-"+code);
+  peer.on("open",lobby);
+  peer.on("error",e=>{
+    if(e.type=="unavailable-id"&&n<5){peer.destroy();mk(n+1)}
+    else{alert("Could not start hosting ("+e.type+"). Check your internet connection.");endHost()}
+  });
+  peer.on("connection",c=>{
+    c.on("data",m=>onMsg(c,m));
+    c.on("close",()=>{if(players[c.peer]&&H.st=="lobby")delete players[c.peer];lobbyUpd()});
+  });
+}
+function lobby(){
+  H.st="lobby";show("host");music(1);
+  const u=H.u=location.href.split(/[?#]/)[0]+"?code="+H.code,c=H.cfg,
+  ck=(k,t)=>`<label class="row"><input type="checkbox" ${c[k]?"checked":""} onchange="H.cfg.${k}=+this.checked"> ${t}</label>`,
+  sel=(k,t,o)=>`<label class="row">${t} <select style="width:auto" onchange="H.cfg.${k}=+this.value">${o.map(([v,l])=>`<option value="${v}" ${c[k]==v?"selected":""}>${l}</option>`).join("")}</select></label>`;
+  $("#host").innerHTML=`<h2>${esc(H.g.title)}</h2><div class="row" style="justify-content:center;gap:24px"><div><p>Join with this code</p><div class="code">${H.code}</div></div>${qrBox(u,H.code)}</div>
+  <p><small>${esc(u)}</small> <button class="s" onclick="copyLink(this)">Copy link</button></p>
+  <div id="pl"></div>
+  <div class="card" style="text-align:left"><b>Game settings</b>
+    ${ck("shuf","Shuffle question order")}${ck("speed","Faster answers earn more points")}${ck("streak","Streak bonus for answering correctly in a row")}
+    ${ck("pen","Lose points for wrong answers")}${ck("lb","Show leaderboard after each question")}${ck("auto","Go to the next question automatically")}${ck("emo","Allow player reactions")}
+    ${sel("time","Time per question",[[0,"As set in the quiz"],...[10,20,30,60].map(t=>[t,t+" seconds for all"])])}
+    ${sel("lim","Number of questions",[[0,"All"],5,10,20].map(t=>t.length?t:[t,t]))}
+    ${sel("max","Player limit",[[0,"No limit"],...[5,10,25,50].map(t=>[t,t])])}
+    <label class="row">Music ${musSel()}</label>
+  </div>
+  <div class="row" style="justify-content:center"><button class="g" id="go" onclick="nextQ()">Start game</button><button class="o" onclick="endHost()">Cancel</button></div>
+  <p><small>Keep this tab open while people play.</small></p>`;
+  lobbyUpd();
+}
+function lobbyUpd(){
+  const l=$("#pl");if(!l||H.st!="lobby")return;
+  const a=live();
+  l.innerHTML=a.map(p=>`<span class="chip">${p.e} ${esc(p.name)}</span>`).join("")||"<p>Waiting for players…</p>";
+  $("#go").disabled=!a.length;
+}
+function onMsg(c,m){
+  if(m.t=="probe")return c.send({t:"st",ok:H.st=="lobby"&&!(H.cfg.max&&Object.keys(players).length>=H.cfg.max),why:H.st=="lobby"?"This game is full.":H.st=="end"?"This game has ended.":"That game has already started."});
+  if(m.t=="emo"){if(H.cfg.emo&&players[c.peer]&&REA.includes(m.e))fly(m.e,players[c.peer].name);return}
+  if(m.t=="join"){
+    if(H.st!="lobby")return c.send({t:"no",why:"That game has already started."});
+    if(H.cfg.max&&Object.keys(players).length>=H.cfg.max)return c.send({t:"no",why:"This game is full."});
+    let n=(m.name+"").slice(0,16),b=n,k=2;
+    while(Object.values(players).some(p=>p.name==n))n=b+" "+k++;
+    players[c.peer]={name:n,e:EM.includes(m.e)?m.e:EM[0],score:0,c,ans:null};
+    c.send({t:"in",name:n,mus:H.cfg.mus});sfx("join");lobbyUpd();
+  }else if(m.t=="ans"){
+    const q=H.g.qs[H.i]||{},p=players[c.peer],a=q.type=="text"?(typeof m.a=="string"?m.a.trim().slice(0,40):""):Array.isArray(m.a)?[...new Set(m.a.filter(x=>Number.isInteger(x)&&x>=0&&x<(q.a||[]).length))]:[];
+    if(H.st=="q"&&p&&p.ans==null&&a.length){
+      p.ans=a;p.ms=Date.now()-H.t0;cnt();
+      if(live().every(p=>p.ans!=null))reveal();
+    }
+  }
+}
+function nextQ(){
+  clearTimeout(H.at);
+  if(H.i<0){
+    if(H.cfg.shuf)H.g.qs.sort(()=>Math.random()-.5);
+    if(H.cfg.lim)H.g.qs=H.g.qs.slice(0,H.cfg.lim);
+    bc({t:"cfg",emo:H.cfg.emo});
+  }
+  H.i++;H.i>=H.g.qs.length?fin():ask();
+}
+function opts(q,c){
+  return q.a.map((t,j)=>t.trim()?`<div class="opt c${j}" style="animation-delay:${j*.07}s;${c&&!q.ok.includes(j)?"opacity:.35":""}"><span class="l">${LT[j]}</span><span>${c&&q.ok.includes(j)?"✓ ":""}${esc(t)}</span>${c?`<b style="margin-left:auto">${c[j]}</b>`:""}</div>`:"").join("");
+}
+function cnt(){
+  const e=$("#cnt");
+  if(e&&H.st=="q")e.textContent=live().filter(p=>p.ans!=null).length+" / "+live().length+" answered";
+}
+function ask(){
+  H.st="q";
+  const q=H.g.qs[H.i],n=H.g.qs.length,t=H.cfg.time||q.time,mu=q.ok.length>1&&q.mode=="all";
+  H.t=t;Object.values(players).forEach(p=>p.ans=null);H.t0=Date.now();
+  bc({t:"q",i:H.i,n,q:q.q,a:q.a,time:t,multi:mu,type:q.type,img:q.img});sfx("go");
+  $("#host").innerHTML=`<div class="bar"><i style="animation-duration:${t}s"></i></div>
+  <p>Question ${H.i+1} of ${n} ${q.type=="text"?'<span class="badge">type the answer</span>':mu?'<span class="badge">select all that apply</span>':""}</p><h2>${esc(q.q)}</h2>
+  ${q.img?`<img src="${esc(q.img)}" alt="" style="max-width:100%;max-height:34vh;border-radius:14px">`:""}
+  <div class="row" style="justify-content:space-between"><h1 id="tm">${t}</h1><span id="cnt"></span><span class="row">${musSel()}<button class="o" onclick="reveal()">Skip</button></span></div>
+  ${q.type=="text"?"<h3>Type your answer on your device</h3>":`<div class="grid">${opts(q)}</div>`}`;
+  clock(t,reveal,1);cnt();
+}
+function reveal(){
+  if(H.st!="q")return;
+  H.st="r";clearInterval(tk);sfx("pop");
+  const q=H.g.qs[H.i],tx=q.type=="text",ac=acc(q),c=q.a.map(()=>0),cf=H.cfg;
+  Object.values(players).forEach(p=>{
+    if(tx){const v=p.ans?norm(p.ans,q.cs):"";p.ok=!!v&&ac.some(x=>lev(x,v)<=Math.min(q.tol??1,Math.max(0,x.length-1)))}
+    else{const s=p.ans||[];p.ok=q.mode=="all"?s.length==q.ok.length&&q.ok.every(x=>s.includes(x)):s.some(x=>q.ok.includes(x));s.forEach(x=>c[x]++)}
+    p.d=0;
+    if(p.ok){p.st=(p.st||0)+1;p.d=(cf.speed?Math.max(100,Math.round(1000*(1-p.ms/1000/H.t/2))):1000)+(cf.streak?Math.min(p.st-1,5)*100:0)}
+    else{p.st=0;if(cf.pen&&p.ans!=null)p.d=-Math.min(p.score,300)}
+    p.score+=p.d;
+  });
+  const r=rank(),L=cf.lb?lb(5):0,hit=r.filter(p=>p.ok).length;
+  r.forEach((p,i)=>p.c.open&&p.c.send({t:"r",ok:p.ok,got:p.ans!=null,d:p.d,s:p.score,r:i+1,n:r.length,ca:tx?q.txt:"",lb:L}));
+  $("#host").innerHTML=`<h2>${esc(q.q)}</h2>
+  ${tx?`<div class="card"><p>Accepted answers</p><h1>${esc(q.txt)}</h1><p>${hit} of ${r.length} got it right</p></div>`:`<div class="grid">${opts(q,c)}</div>`}
+  ${L?"<h2>Leaderboard</h2>"+board(5):""}
+  <p class="row" style="justify-content:center"><button class="g" onclick="nextQ()">${H.i+1<H.g.qs.length?"Next question":"Finish"}</button>${musSel()}</p>`;
+  if(cf.auto)H.at=setTimeout(()=>{if(H.st=="r")nextQ()},6000);
+}
+function fin(){
+  H.st="end";sfx("end");music(0);
+  const r=rank(),top=lb(3);
+  r.forEach((p,i)=>p.c.open&&p.c.send({t:"end",s:p.score,r:i+1,n:r.length,top}));
+  $("#host").innerHTML=`<h1>Final results</h1>${podium(top)}${board(8,3)}<p><button class="g" onclick="endHost()">Done</button></p>`;
+}
+function endHost(){clearInterval(tk);H&&clearTimeout(H.at);peer&&peer.destroy();peer=0;home()}
+
+/* ---------- player ---------- */
+function join(){
+  const code=$("#code").value.trim(),name=$("#nick").value.trim(),j=$("#jmsg");
+  if(!code||!name){j.textContent="Enter a game code and a nickname.";return}
+  j.textContent="Connecting…";over=0;emoOn=0;
+  peer&&peer.destroy();
+  peer=new Peer();
+  peer.on("error",e=>j.textContent=e.type=="peer-unavailable"?"No game found with that code.":"Connection error ("+e.type+").");
+  peer.on("open",()=>{
+    pc=peer.connect("kqz-"+code);
+    pc.on("open",()=>pc.send({t:"join",name,e:em}));
+    pc.on("data",pmsg);
+    pc.on("close",()=>{music(0);if(!over)pscr('<h2>Host disconnected</h2><button onclick="leave()">Home</button>')});
+    setTimeout(()=>{if(!pc.open&&!$("#join").hidden)j.textContent="Could not connect. Check the code and your network."},12000);
+  });
+}
+function pmsg(m){
+  if(m.t=="no"){leave();show("join");$("#jmsg").textContent=m.why}
+  else if(m.t=="cfg")emoOn=m.emo;
+  else if(m.t=="mus"){mst=m.v;music(mw)}
+  else if(m.t=="in"){if(m.mus)mst=m.mus;sfx("join");music(1);pscr(`<div style="font-size:5rem;animation:bounce .6s">${em}</div><h2>You’re in, ${esc(m.name)}!</h2><p>Watch the host screen…</p>`)}
+  else if(m.t=="q"){
+    pick=[];multi=m.multi;sfx("pop");
+    pscr(`<div class="bar"><i style="animation-duration:${m.time}s"></i></div><p>Question ${m.i+1} of ${m.n}</p><h1 id="tm">${m.time}</h1><h3>${esc(m.q)}</h3>
+    ${m.img?`<img src="${esc(m.img)}" alt="" style="max-width:100%;max-height:30vh;border-radius:14px">`:""}
+    ${m.type=="text"?`<p><input id="ta" maxlength="40" autocomplete="off" placeholder="Type your answer" style="font-size:1.4rem;text-align:center" onkeydown="if(event.key=='Enter')sendT()"></p><button class="g" onclick="sendT()">Submit answer</button>`
+    :`${m.multi?'<p><span class="badge">select all that apply</span></p>':""}
+    <div class="grid">${m.a.map((t,j)=>t.trim()?`<button class="opt c${j}" id="o${j}" style="animation-delay:${j*.07}s" onclick="tap(${j})"><span class="l">${LT[j]}</span><span>${esc(t)}</span></button>`:"").join("")}</div>
+    ${m.multi?'<p><button class="g" onclick="submit()">Submit answer</button></p>':""}`}`);
+    clock(m.time);
+  }else if(m.t=="r"){
+    clearInterval(tk);sfx(m.ok?"ok":"no");
+    pscr(`<div class="${m.ok?"good":"bad"}"><div style="font-size:5rem;animation:${m.ok?"bounce":"shake"} .6s">${m.ok?"🎉":m.got?"💥":"⏰"}</div>
+    <h1>${m.ok?"Correct!":m.got?"Not quite":"Too slow"}</h1>${m.ca&&!m.ok?`<p>Answer: <b>${esc(m.ca)}</b></p>`:""}<h2>${m.d>0?"+":""}${m.d} points</h2><p>${em} ${m.s} total · place ${m.r} of ${m.n}</p></div>
+    ${m.lb?"<h3>Leaderboard</h3>"+rows(m.lb):""}`);
+  }else if(m.t=="end"){
+    over=1;clearInterval(tk);sfx("end");music(0);
+    pscr(`<h1>Game over</h1>${podium(m.top)}<h2>${em} You: place ${m.r} of ${m.n}</h2><p>${m.s} points</p><button onclick="leave()">Home</button>`);
+  }
+}
+function send(a){pc.send({t:"ans",a});clearInterval(tk);pscr("<h2>Answer sent!</h2><p>Waiting for the others…</p>")}
+function tap(j){
+  if(!multi)return send([j]);
+  const i=pick.indexOf(j);
+  i<0?pick.push(j):pick.splice(i,1);
+  $("#o"+j).classList.toggle("sel");
+}
+function submit(){if(pick.length)send(pick)}
+function sendT(){const v=$("#ta").value.trim();if(v)send(v)}
+function ended(m){
+  if($("#join").hidden||(pc&&pc.open))return;
+  $("#jcard").hidden=1;$("#emsg").textContent=m;$("#ended").hidden=0;
+}
+function probe(code){
+  try{
+    const p=new Peer(),fail=m=>{p.destroy();if($("#code").value==code)ended(m)};
+    p.on("error",e=>e.type=="peer-unavailable"?fail("This game has ended."):p.destroy());
+    p.on("open",()=>{
+      const c=p.connect("kqz-"+code);
+      c.on("open",()=>c.send({t:"probe"}));
+      c.on("data",r=>{if(r.t=="st")r.ok?p.destroy():fail(r.why)});
+    });
+  }catch(e){}
+}
+function leave(){over=1;clearInterval(tk);peer&&peer.destroy();peer=0;menu()}
+
+/* ---------- reactions, copy link ---------- */
+const REA=["👍","👎","👏","❤️","😂","😮"];
+let emoOn=0,lr=0;
+$("#emo").innerHTML=REA.map(e=>`<button class="em" onclick="react('${e}')">${e}</button>`).join("");
+function fly(e,n){
+  const d=document.createElement("div");
+  d.className="fl";d.style.left=(5+Math.random()*85)+"vw";
+  d.innerHTML=e+(n?`<small>${esc(n)}</small>`:"");
+  document.body.appendChild(d);setTimeout(()=>d.remove(),2600);
+}
+function react(e){if(!pc||!pc.open||Date.now()-lr<900)return;lr=Date.now();pc.send({t:"emo",e});fly(e)}
+function copyLink(b){
+  const u=H.u;
+  (navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(
+    ()=>{b.textContent="Copied!";setTimeout(()=>b.textContent="Copy link",1500)},()=>prompt("Copy this link:",u));
+}
+function menu(){if(!$("#ended").hidden)$("#code").value="";$("#ended").hidden=1;$("#jcard").hidden=0;show("menu");music(0)}
+
+/* ---------- QR code ---------- */
+function qr(text){
+  const D=[...new TextEncoder().encode(text)],QE={M:[10,16,26,18,24,16,18,22,22,26],L:[7,10,15,20,26,18,20,24,30,18]},QB={M:[1,1,1,2,2,4,4,4,5,5],L:[1,1,1,1,1,2,2,2,2,4]},
+  apos=v=>{if(v<2)return[];const n=Math.floor(v/7)+2,st=Math.ceil((v*4+4)/(n*2-2))*2,r=[6];for(let p=v*4+10;r.length<n;p-=st)r.splice(1,0,p);return r},
+  raw=v=>{let r=(16*v+128)*v+64;if(v>1){const n=Math.floor(v/7)+2;r-=(25*n-10)*n-55;if(v>6)r-=36}return r>>3};
+  let L,v;
+  for(L of["M","L"]){for(v=1;v<=10;v++)if(4+(v<10?8:16)+D.length*8<=(raw(v)-QE[L][v-1]*QB[L][v-1])*8)break;if(v<=10)break}
+  if(v>10)return null;
+  const bits=[],put=(x,n)=>{for(let i=n-1;i>=0;i--)bits.push((x>>>i)&1)},cw=raw(v),ec=QE[L][v-1],nb=QB[L][v-1],dc=cw-ec*nb;
+  put(4,4);put(D.length,v<10?8:16);D.forEach(b=>put(b,8));put(0,Math.min(4,dc*8-bits.length));while(bits.length%8)bits.push(0);
+  const data=[];for(let i=0;i<bits.length;i+=8)data.push(parseInt(bits.slice(i,i+8).join(""),2));
+  for(let p=0xEC;data.length<dc;p^=0xEC^0x11)data.push(p);
+  const mul=(x,y)=>{let z=0;for(let i=7;i>=0;i--){z=(z<<1)^((z>>>7)*0x11D);z^=((y>>>i)&1)*x}return z},
+  gen=n=>{const r=Array(n).fill(0);r[n-1]=1;let t=1;for(let i=0;i<n;i++){for(let j=0;j<n;j++){r[j]=mul(r[j],t);if(j+1<n)r[j]^=r[j+1]}t=mul(t,2)}return r},
+  rem=(d,g)=>{const r=g.map(()=>0);for(const b of d){const f=b^r.shift();r.push(0);g.forEach((c,i)=>r[i]^=mul(c,f))}return r},
+  ns=nb-cw%nb,sl=Math.floor(cw/nb),g=gen(ec),bl=[];
+  let k=0;
+  for(let i=0;i<nb;i++){const d=data.slice(k,k+sl-ec+(i<ns?0:1));k+=d.length;bl.push({d,e:rem(d,g)})}
+  const seq=[];for(let i=0;i<=sl-ec;i++)bl.forEach(b=>i<b.d.length&&seq.push(b.d[i]));for(let i=0;i<ec;i++)bl.forEach(b=>seq.push(b.e[i]));
+  const N=v*4+17,M=Array.from({length:N},()=>Array(N).fill(0)),F=Array.from({length:N},()=>Array(N).fill(0)),
+  sf=(x,y,d)=>{M[y][x]=+d;F[y][x]=1},bit=(x,i)=>(x>>>i)&1;
+  for(let i=0;i<N;i++){sf(6,i,i%2==0);sf(i,6,i%2==0)}
+  const fp=(x,y)=>{for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++){const X2=x+dx,Y=y+dy;if(X2>=0&&X2<N&&Y>=0&&Y<N){const d=Math.max(Math.abs(dx),Math.abs(dy));sf(X2,Y,d!=2&&d!=4)}}};
+  fp(3,3);fp(N-4,3);fp(3,N-4);
+  const ps=apos(v);
+  ps.forEach((a,i)=>ps.forEach((b,j)=>{if(!((i==0&&j==0)||(i==0&&j==ps.length-1)||(i==ps.length-1&&j==0)))for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)sf(a+dx,b+dy,Math.max(Math.abs(dx),Math.abs(dy))!=1)}));
+  const fmt=m=>{const d=((L=="L"?1:0)<<3)|m;let r=d;for(let i=0;i<10;i++)r=(r<<1)^((r>>>9)*0x537);const b=((d<<10)|r)^0x5412;
+    for(let i=0;i<6;i++)sf(8,i,bit(b,i));sf(8,7,bit(b,6));sf(8,8,bit(b,7));sf(7,8,bit(b,8));for(let i=9;i<15;i++)sf(14-i,8,bit(b,i));
+    for(let i=0;i<8;i++)sf(N-1-i,8,bit(b,i));for(let i=8;i<15;i++)sf(8,N-15+i,bit(b,i));sf(8,N-8,1)};
+  if(v>=7){let r=v;for(let i=0;i<12;i++)r=(r<<1)^((r>>>11)*0x1F25);const b=(v<<12)|r;for(let i=0;i<18;i++){const a=N-11+i%3,c=Math.floor(i/3);sf(a,c,bit(b,i));sf(c,a,bit(b,i))}}
+  fmt(0);
+  let bi=0;
+  for(let r=N-1;r>=1;r-=2){if(r==6)r=5;for(let vt=0;vt<N;vt++)for(let j=0;j<2;j++){const x=r-j,y=((r+1)&2)==0?N-1-vt:vt;if(!F[y][x]&&bi<seq.length*8){M[y][x]=(seq[bi>>>3]>>>(7-(bi&7)))&1;bi++}}}
+  const mf=(m,x,y)=>[(x+y)%2==0,y%2==0,x%3==0,(x+y)%3==0,(Math.floor(x/3)+Math.floor(y/2))%2==0,x*y%2+x*y%3==0,(x*y%2+x*y%3)%2==0,((x+y)%2+x*y%3)%2==0][m],
+  mask=m=>{for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(!F[y][x]&&mf(m,x,y))M[y][x]^=1},
+  pen=()=>{let p=0,d=0;const ln=[];for(let i=0;i<N;i++){ln.push(M[i].join(""));ln.push(M.map(r=>r[i]).join(""))}
+    ln.forEach(t=>{(t.match(/(.)\1{4,}/g)||[]).forEach(r=>p+=r.length-2);p+=40*(t.match(/(?=00001011101|10111010000)/g)||[]).length});
+    for(let y=0;y<N-1;y++)for(let x=0;x<N-1;x++){const c=M[y][x];if(c==M[y][x+1]&&c==M[y+1][x]&&c==M[y+1][x+1])p+=3}
+    M.forEach(r=>r.forEach(c=>d+=c));return p+(Math.ceil(Math.abs(d*20-N*N*10)/(N*N))-1)*10};
+  let best=0,bp=1e9;
+  for(let m=0;m<8;m++){mask(m);fmt(m);const p=pen();if(p<bp){bp=p;best=m}mask(m)}
+  mask(best);fmt(best);return M;
+}
+function qrBox(u,code){
+  let m;try{m=/^https?:/.test(u)&&qr(u)}catch(e){}
+  if(!m)return"";
+  const n=m.length+8,p=[];m.forEach((r,y)=>r.forEach((d,x)=>d&&p.push(`M${x+4} ${y+4}h1v1h-1z`)));
+  return `<div class="qrb" role="button" tabindex="0" title="Tap to enlarge" onclick="this.classList.toggle('big')" onkeydown="if(event.key=='Enter'||event.key==' ')this.click()"><svg viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges" role="img" aria-label="QR code"><rect width="${n}" height="${n}" fill="#fff"/><path d="${p.join("")}"/></svg><small>Or scan to join</small><span class="qc">${code}</span></div>`;
+}
+addEventListener("keydown",e=>{if(e.key=="Escape")document.querySelectorAll(".qrb.big").forEach(x=>x.classList.remove("big"))});
+
+/* ---------- Romanian ---------- */
+const RO=Object.fromEntries(`Join a game|Intră într-un joc
+Create quiz|Creează quiz
+Play quizzes with friends, hosted from your own device|Joacă quizuri cu prietenii, găzduite de pe dispozitivul tău
+← Back|← Înapoi
+Pick your character|Alege-ți personajul
+Join|Intră
+Game code|Cod joc
+Nickname|Poreclă
+Connecting…|Se conectează…
+Enter a game code and a nickname.|Introdu un cod de joc și o poreclă.
+No game found with that code.|Nu există niciun joc cu acest cod.
+Could not connect. Check the code and your network.|Nu m-am putut conecta. Verifică codul și rețeaua.
+That game has already started.|Jocul a început deja.
+This game is full.|Jocul este plin.
+My quizzes|Quizurile mele
+Search…|Caută…
++ New quiz|+ Quiz nou
+Import|Importă
+No quizzes found. Make one with “New quiz” or import one.|Niciun quiz găsit. Creează unul cu „Quiz nou” sau importă unul.
+Host|Găzduiește
+Edit|Editează
+Share link|Link de partajare
+Export|Exportă
+Delete|Șterge
+Delete this quiz?|Ștergi acest quiz?
+Browser storage is full. Use fewer or smaller images.|Memoria browserului este plină. Folosește mai puține imagini sau mai mici.
+That is not a valid Quizzy quiz.|Acesta nu este un quiz Quizzy valid.
+That share link is broken.|Linkul de partajare este stricat.
+Link copied. It carries the questions and answers. To include images, send an exported file instead.|Link copiat. Conține întrebările și răspunsurile. Pentru a include imagini, trimite un fișier exportat.
+Copy this link:|Copiază acest link:
+Quiz title|Titlul quizului
+Save|Salvează
+Cancel|Anulează
+Tick every correct answer. With 2 or more ticked, choose whether any one of them is right or all must be selected. Press Ctrl+V to paste an image into the selected question.|Bifează fiecare răspuns corect. Dacă bifezi 2 sau mai multe, alege dacă oricare dintre ele e corect sau toate trebuie selectate. Apasă Ctrl+V pentru a lipi o imagine în întrebarea selectată.
++ Add question|+ Adaugă întrebare
+Question|Întrebare
+Pick an answer|Alege răspunsul
+Type the answer|Scrie răspunsul
+✎ Typed answer|✎ Răspuns scris
+◉ One right answer|◉ Un singur răspuns corect
+☑ All ticked must be selected|☑ Toate cele bifate trebuie alese
+◉ Any ticked answer is right|◉ Orice răspuns bifat e corect
+Any ticked is right|Orice bifat e corect
+All ticked required|Toate bifatele necesare
+Remove image|Elimină imaginea
+or paste with Ctrl+V|sau lipește cu Ctrl+V
+Accepted answers, separated by commas|Răspunsuri acceptate, separate prin virgulă
+Case sensitive|Diferențiază majusculele
+Allowed typos|Greșeli permise
+letters wrong, missing or extra|litere greșite, lipsă sau în plus
++ Add answer|+ Adaugă răspuns
+Correct answer|Răspuns corect
+Give your quiz a title.|Dă un titlu quizului.
+Add at least one question.|Adaugă cel puțin o întrebare.
+at least one accepted answer.|cel puțin un răspuns acceptat.
+at least 2 answers, with every ticked answer filled in.|cel puțin 2 răspunsuri, iar fiecare răspuns bifat să fie completat.
+Join with this code|Intră cu acest cod
+Copy link|Copiază linkul
+Copied!|Copiat!
+Waiting for players…|Se așteaptă jucători…
+Game settings|Setări joc
+Shuffle question order|Amestecă ordinea întrebărilor
+Faster answers earn more points|Răspunsurile rapide primesc mai multe puncte
+Streak bonus for answering correctly in a row|Bonus de serie pentru răspunsuri corecte consecutive
+Lose points for wrong answers|Pierzi puncte pentru răspunsuri greșite
+Show leaderboard after each question|Arată clasamentul după fiecare întrebare
+Go to the next question automatically|Treci automat la următoarea întrebare
+Allow player reactions|Permite reacțiile jucătorilor
+Time per question|Timp pe întrebare
+As set in the quiz|Cum e setat în quiz
+Number of questions|Număr de întrebări
+All|Toate
+Player limit|Limită de jucători
+No limit|Fără limită
+Start game|Începe jocul
+Keep this tab open while people play.|Ține această filă deschisă cât timp se joacă.
+select all that apply|alege toate care se potrivesc
+type the answer|scrie răspunsul
+Skip|Sari peste
+Type your answer on your device|Scrie răspunsul pe dispozitivul tău
+Accepted answers|Răspunsuri acceptate
+Leaderboard|Clasament
+Next question|Următoarea întrebare
+Finish|Termină
+Final results|Rezultate finale
+Done|Gata
+No players|Niciun jucător
+Watch the host screen…|Uită-te la ecranul gazdei…
+Submit answer|Trimite răspunsul
+Type your answer|Scrie răspunsul
+Answer sent!|Răspuns trimis!
+Waiting for the others…|Se așteaptă ceilalți…
+Correct!|Corect!
+Not quite|Aproape
+Too slow|Prea încet
+Answer:|Răspuns:
+Game over|Joc terminat
+Home|Acasă
+Host disconnected|Gazda s-a deconectat
+Music|Muzică
+Upbeat|Energic
+Chill|Relaxat
+Arcade|Arcade
+No music|Fără muzică
+Or scan to join|Sau scanează pentru a intra
+Tap to enlarge|Atinge pentru a mări
+Music on/off|Muzică pornită/oprită
+Sound effects on/off|Efecte sonore pornite/oprite
+Language|Limbă
+This game has ended.|Jocul s-a încheiat.
+Back to menu|Înapoi la meniu`.split("\n").map(l=>l.split("|")));
+const RU=[
+[/^Question (\d+) of (\d+)$/,m=>`Întrebarea ${m[1]} din ${m[2]}`],
+[/^(\d+) questions$/,m=>m[1]+" întrebări"],
+[/^(\d+) \/ (\d+) answered$/,m=>`${m[1]} / ${m[2]} au răspuns`],
+[/^(\d+) seconds for all$/,m=>m[1]+" secunde pentru toate"],
+[/^(\d+) of (\d+) got it right$/,m=>`${m[1]} din ${m[2]} au răspuns corect`],
+[/^You’re in, (.*)!$/,m=>`Ai intrat, ${m[1]}!`],
+[/^Answer ([A-H])$/,m=>"Răspuns "+m[1]],
+[/^(.*) · (\d+)s$/,m=>tr(m[1])+" · "+m[2]+"s"],
+[/^([+-]?\d+) points$/,m=>m[1]+" puncte"],
+[/^(.*?)(\d+) total · place (\d+) of (\d+)$/,m=>`${m[1]}${m[2]} total · locul ${m[3]} din ${m[4]}`],
+[/^(.*?)You: place (\d+) of (\d+)$/,m=>`${m[1]}Tu: locul ${m[2]} din ${m[3]}`],
+[/^Connection error \((.*)\)\.$/,m=>`Eroare de conexiune (${m[1]}).`],
+[/^Could not start hosting \((.*)\)\. Check your internet connection\.$/,m=>`Nu am putut începe găzduirea (${m[1]}). Verifică conexiunea la internet.`],
+[/^Add the quiz “(.*)” \((\d+) questions\)\?$/,m=>`Adaugi quizul „${m[1]}” (${m[2]} întrebări)?`],
+[/^Question (\d+) is incomplete\. Add the question text and (.*)$/,m=>`Întrebarea ${m[1]} este incompletă. Adaugă textul întrebării și ${tr(m[2])}`]];
+const tr=k=>Object.hasOwn(RO,k)?RO[k]:(RU.map(([r,f])=>{const m=k.match(r);return m&&f(m)}).find(Boolean)||k),
+O=new WeakMap(),CF={childList:true,subtree:true,characterData:true};
+let lang=LS.getItem("qz_lang")||((navigator.language||"").toLowerCase().startsWith("ro")?"ro":"en");
+function tn(n){
+  const v=n.data,k=v.trim(),o=O.get(n);
+  if(o&&(v==o.ro||v==o.en)){const w=lang=="ro"?o.ro:o.en;if(v!=w)n.data=w;return}
+  if(!k)return;
+  const r=lang=="ro"?tr(k):k;
+  if(r!=k){const x=v.replace(k,()=>r);O.set(n,{en:v,ro:x});n.data=x}else O.delete(n);
+}
+function ta(el){
+  for(const a of ["placeholder","title","aria-label"]){
+    if(!el.hasAttribute(a))continue;
+    const d="en"+a.replace("-",""),v=el.dataset[d]??el.getAttribute(a);
+    el.dataset[d]=v;el.setAttribute(a,lang=="ro"?tr(v):v);
+  }
+}
+function walk(r){
+  if(r.nodeType==3)return tn(r);
+  if(r.nodeType!=1||/^(SCRIPT|STYLE)$/.test(r.tagName))return;
+  ta(r);r.childNodes.forEach(walk);
+}
+const ob=new MutationObserver(ms=>{ob.disconnect();ms.forEach(m=>m.type=="childList"?m.addedNodes.forEach(walk):walk(m.target));ob.observe(document.body,CF)});
+function apply(r){ob.disconnect();walk(r);ob.observe(document.body,CF)}
+const FLG={ro:`<svg viewBox="0 0 3 2" aria-hidden="true"><path fill="#002B7F" d="M0 0h1v2H0z"/><path fill="#FCD116" d="M1 0h1v2H1z"/><path fill="#CE1126" d="M2 0h1v2H2z"/></svg>`,
+en:`<svg viewBox="0 0 60 30" aria-hidden="true"><clipPath id="ujs"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="ujt"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath><g clip-path="url(#ujs)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#ujt)" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg>`};
+function togLang(){setLang(lang=="ro"?"en":"ro")}
+function setLang(l){lang=l;LS.setItem("qz_lang",l);document.documentElement.lang=l;$("#lg").innerHTML=FLG[l];apply(document.body)}
+const _al=alert,_cf=confirm,_pr=prompt;
+alert=s=>_al(tr(s));confirm=s=>_cf(tr(s));prompt=(s,d)=>_pr(tr(s),d);
+
+/* ---------- start ---------- */
+const m=location.search.match(/code=(\d+)/);
+if(m)$("#code").value=m[1];
+m?show("join"):menu();
+if(m)probe(m[1]);
+setLang(lang);
+const h=location.hash.match(/^#import=(.+)/);
+if(h){
+  history.replaceState(0,"",location.pathname+location.search);
+  try{add(JSON.parse(decodeURIComponent(escape(atob(h[1])))))}catch(e){alert("That share link is broken.")}
+}
+</script>
+</body>
+</html>
