@@ -140,7 +140,7 @@ button.o,.em{background-image:none}
 button.o{box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
 .opt{background-image:linear-gradient(rgba(255,255,255,.28),rgba(255,255,255,0) 55%)}
 @media(hover:hover){button:not(:disabled):hover{filter:brightness(1.08)}}
-#mm,#mute,#lg{background:rgba(255,255,255,.12);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:30px}
+#mm,#mute,#lg,#sx{background:rgba(255,255,255,.12);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:30px}
 .bar{height:12px;border-radius:12px}.bar i{background:linear-gradient(90deg,var(--b),var(--a))}
 #tm{display:inline-grid;place-items:center;min-width:2.1em;height:2.1em;padding:0 .2em;border-radius:50%;border:4px solid var(--b);background:rgba(0,0,0,.2);font-size:1.9rem}
 #tm.hot{border-color:var(--a)}
@@ -155,7 +155,7 @@ details.card summary{cursor:pointer;font-weight:800;font-size:1.05rem}
 .avp{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px}
 .avg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .avr{display:flex;align-items:center;justify-content:space-between;gap:4px;background:rgba(255,255,255,.08);border-radius:12px;padding:3px}
-.avr span{flex:1;text-align:center;font-weight:800;font-size:.85rem}.avr small{opacity:.6}
+.avr span{flex:1;text-align:center;font-weight:800;font-size:.85rem}
 @media(max-width:380px){.avg{grid-template-columns:1fr}}
 
 /* ---- v1.4: zoom + kick, clean lobby ---- */
@@ -171,6 +171,15 @@ details.card summary{cursor:pointer;font-weight:800;font-size:1.05rem}
 .chip[role=button]{cursor:zoom-in}
 #host.clean .code{font-size:min(24vw,9rem)}
 #host.clean .qrb{display:none}
+/* ---- v1.5: solo test run ---- */
+#sx{position:fixed;top:8px;left:8px;z-index:9;padding:6px 10px}
+/* ---- top-right controls: same size, evenly spaced ---- */
+:root{--tb-w:48px;--tb-h:40px;--tb-gap:10px;--tb-edge:8px}
+#mm,#mute,#lg{top:var(--tb-edge);width:var(--tb-w);height:var(--tb-h);min-height:0;padding:0;display:grid;place-items:center;font-size:1rem;line-height:1;white-space:nowrap}
+#lg{right:var(--tb-edge)}
+#mute{right:calc(var(--tb-edge) + var(--tb-w) + var(--tb-gap))}
+#mm{right:calc(var(--tb-edge) + (var(--tb-w) + var(--tb-gap))*2)}
+#lg svg{display:block;width:28px;height:19px;border-radius:3px}
 </style>
 </head>
 <body>
@@ -179,7 +188,8 @@ details.card summary{cursor:pointer;font-weight:800;font-size:1.05rem}
 <button id="mute" class="o s" onclick="mute=!mute;LS.setItem('qz_mute',mute?1:0);this.textContent=mute?'🔇':'🔊'" title="Sound effects on/off" aria-label="Sound effects on/off"></button>
 <button id="lg" class="o s" onclick="togLang()" title="Language" aria-label="Language"></button>
 <div id="emo" hidden></div>
-<div id="ver" translate="no">v1.4</div>
+<button id="sx" class="o s" hidden onclick="soloExit()">✕ Exit test</button>
+<div id="ver" translate="no">v1.5</div>
 <main>
 <section id="menu" class="mid">
   <h1 class="logo">Quizzy</h1>
@@ -355,10 +365,12 @@ function setMus(v){mst=v;H.cfg.mus=v;v!="custom"&&LS.setItem("qz_mus",v);bc({t:"
 let CM="",CA;
 const PF=["#ff6f59","#ffc93c","#7bdff2","#b79cff","#8be0a4","#ff9ecb","#ffa94d","#cfd8e6"];
 /* ---------- avatars: 10 parts -> millions of combinations ---------- */
-const AVN=[12,6,14,12,10,10,10,14,10,16],
+const AVN=[12,6,14,12,10,10,11,14,10,16,13,13],
 SK=["#ffdbb4","#f1c27d","#e0ac69","#c68642","#8d5524","#5c3a21","#9be3a1","#a5b4ff","#fde7d7","#ffb3c7","#f7d96a","#cfd6e0"],
 HC=["#2b1d14","#6b4226","#a0522d","#e8c35a","#c9c9c9","#d9432b","#3b6fe0","#ff6fb1","#6be3a0","#a56bff","#ff9f1c","#2ec4b6"],
-AVL=["Skin","Face","Hair","Hair color","Eyes","Mouth","Details","Accessory","Outfit","Background"],
+AVL=["Skin","Face","Hair","Hair color","Eyes","Mouth","Details","Accessory","Outfit","Background","Outfit color","Outfit accent"],
+AVO=[0,1,2,3,4,5,6,7,8,10,11,9],
+OCL=(i,l=58)=>i?`hsl(${(i-1)*30},80%,${l}%)`:"",
 BG=[...PF.map((c,i)=>({f:c,s:PF[(i+3)%8],a:PF[(i+5)%8]})),
  {g:["#ff7e9d","#ffd86f"],s:"#4a2c82",a:"#7bdff2",d:'<circle cx="80" cy="22" r="11" fill="#fff" fill-opacity=".45"/>'},
  {g:["#4facfe","#a6f0ff"],s:"#ffc93c",a:"#ff6f59",d:'<g fill="#fff" fill-opacity=".4"><circle cx="16" cy="24" r="7"/><circle cx="86" cy="14" r="5"/><circle cx="90" cy="46" r="3.5"/><circle cx="10" cy="52" r="3"/></g>'},
@@ -368,14 +380,14 @@ BG=[...PF.map((c,i)=>({f:c,s:PF[(i+3)%8],a:PF[(i+5)%8]})),
  {f:"#ffc93c",s:"#7bdff2",a:"#ff6f59",d:'<g stroke="#fff" stroke-opacity=".45" stroke-width="9"><path d="M-10 30L30 -10M-10 70L70 -10M-10 110L110 -10M30 110L110 30M70 110L110 70"/></g>'},
  {f:"#ff7a59",s:"#7bdff2",a:"#ffc93c",d:`<g fill="#fff" fill-opacity=".22">${Array.from({length:12},(_,i)=>{const a=i*Math.PI/6,b=a+Math.PI/12,R=120;return`<path d="M50 56L${(50+R*Math.cos(a)).toFixed(1)} ${(56+R*Math.sin(a)).toFixed(1)}L${(50+R*Math.cos(b)).toFixed(1)} ${(56+R*Math.sin(b)).toFixed(1)}Z"/>`}).join("")}</g>`},
  {f:"#0f4c5c",s:"#ff9ecb",a:"#ffc93c",d:'<g><rect x="12" y="14" width="7" height="3.4" rx="1" fill="#ffc93c" transform="rotate(30 15 15)"/><rect x="80" y="12" width="7" height="3.4" rx="1" fill="#ff6f59" transform="rotate(-25 83 14)"/><rect x="88" y="44" width="7" height="3.4" rx="1" fill="#7bdff2" transform="rotate(50 91 46)"/><rect x="6" y="46" width="7" height="3.4" rx="1" fill="#b79cff" transform="rotate(-40 9 48)"/><circle cx="34" cy="10" r="2.4" fill="#ff9ecb"/><circle cx="68" cy="30" r="2" fill="#8be0a4"/><circle cx="20" cy="34" r="2" fill="#ffc93c"/><circle cx="92" cy="24" r="2.2" fill="#ff9ecb"/></g>'}],
-avN=s=>{const a=String(s).split(".");if(a.length==9)a.splice(8,0,"0");return a.length==AVN.length&&a.every((x,i)=>/^\d+$/.test(x)&&+x<AVN[i])?a.join("."):""},
+avN=s=>{const a=String(s).split(".");if(a.length==9)a.splice(8,0,"0");while(a.length>=10&&a.length<AVN.length)a.push("0");return a.length==AVN.length&&a.every((x,i)=>/^\d+$/.test(x)&&+x<AVN[i])?a.join("."):""},
 avOk=s=>!!avN(s),
 rndAv=()=>AVN.map(n=>rnd(n)).join("."),
 star=(x,y,R,r)=>Array.from({length:10},(_,i)=>{const a=-Math.PI/2+i*Math.PI/5,q=i%2?r:R;return(x+q*Math.cos(a)).toFixed(1)+","+(y+q*Math.sin(a)).toFixed(1)}).join(" ");
 let avU=0;
 function av(s,z=40){
   s=avN(s)||AVN.map(()=>0).join(".");
-  const [sk,hd,hs,hc,ey,mo,dt,ax,ou,bg]=s.split(".").map(Number),B=BG[bg],skn=SK[sk],hr=HC[hc],ik="#1b1b2f",sh=B.s,ac2=B.a,u=++avU,
+  const [sk,hd,hs,hc,ey,mo,dt,ax,ou,bg,oc,oa]=s.split(".").map(Number),B=BG[bg],skn=SK[sk],hr=HC[hc],ik="#1b1b2f",sh=OCL(oc)||B.s,ac2=B.a,oy=OCL(oa),ox=oy||ac2,u=++avU,
   st=`stroke="${ik}" stroke-width="3" stroke-linecap="round" fill="none"`,dot=(x,y)=>`<circle cx="${x}" cy="${y}" r="3.3" fill="${ik}"/>`,
   cap='<path d="M21 52Q19 21 50 21Q81 21 79 52Q70 38 50 38Q30 38 21 52Z"/>',
   head=['<circle cx="50" cy="54" r="30"/>','<ellipse cx="50" cy="54" rx="26" ry="32"/>','<rect x="22" y="25" width="56" height="60" rx="22"/>',
@@ -397,9 +409,10 @@ function av(s,z=40){
    `<path d="M23 62Q24 90 50 90Q76 90 77 62Q70 78 50 78Q30 78 23 62Z" fill="${hr}"/>`,`<path d="M36 63Q44 56 50 62Q56 56 64 63Q56 61 50 65Q44 61 36 63Z" fill="${hr}"/>`,
    '<ellipse cx="31" cy="62" rx="6" ry="4" fill="#ff4f7a55"/><ellipse cx="69" cy="62" rx="6" ry="4" fill="#ff4f7a55"/>','<circle cx="63" cy="63" r="2" fill="#5a3a22"/>',
    '<g stroke="#c0392b" stroke-width="2.6" stroke-linecap="round"><path d="M29 57L36 72"/></g><g stroke="#fff" stroke-opacity=".75" stroke-width="1.6" stroke-linecap="round"><path d="M26.5 62L33 59.5M30 69.5L36.5 66.5"/></g>',
-   '<g stroke="#ff5d73" stroke-width="3" stroke-linecap="round"><path d="M27 61L37 63M28 67L36 68"/><path d="M73 61L63 63M72 67L64 68"/></g>',
+   `<path d="M50 61Q43 55.5 35 59.5Q42 67.5 50 65Q58 67.5 65 59.5Q57 55.5 50 61Z" fill="${hr}"/><path d="M36.5 61Q29.5 65 28 57M63.5 61Q70.5 65 72 57" fill="none" stroke="${hr}" stroke-width="3.2" stroke-linecap="round"/>`,
    '<g transform="rotate(-28 66 62)"><rect x="53" y="56" width="26" height="12" rx="6" fill="#f7dcb4" stroke="#c9a56b" stroke-width="1.2"/><rect x="61" y="56" width="10" height="12" fill="#e6b97c"/><g fill="#c9a56b"><circle cx="57" cy="60" r=".9"/><circle cx="57" cy="64" r=".9"/><circle cx="75" cy="60" r=".9"/><circle cx="75" cy="64" r=".9"/></g></g>',
-   `<polygon points="${star(67,62,6,2.6)}" fill="#ffd23c" stroke="#d99a00" stroke-width="1" stroke-linejoin="round"/><circle cx="33" cy="63" r="1.6" fill="#fff"/><circle cx="29.5" cy="60" r="1" fill="#fff"/>`][dt],
+   `<g transform="translate(66.5 62.5) rotate(14) scale(.72)"><path d="M0 7.5C-9 .5 -8 -7.5 -3 -7.5C-1 -7.5 0 -5.5 0 -4.5C0 -5.5 1 -7.5 3 -7.5C8 -7.5 9 .5 0 7.5Z" fill="#ff4f7a" stroke="#d6335f" stroke-width="1.2" stroke-linejoin="round"/><circle cx="-3.6" cy="-3.2" r="1.7" fill="#fff" fill-opacity=".75"/></g>`,
+   `<path d="M40 63Q45 59.5 50 63Q55 59.5 60 63Q55 62 50 65Q45 62 40 63Z" fill="${hr}"/><path d="M41 74Q50 70 59 74Q61 84 50 93Q39 84 41 74Z" fill="${hr}"/>`][dt],
   E=[dot(39,52)+dot(61,52),`<g fill="#fff"><circle cx="39" cy="52" r="7"/><circle cx="61" cy="52" r="7"/></g><g fill="${ik}"><circle cx="40" cy="53" r="3.5"/><circle cx="62" cy="53" r="3.5"/></g>`,
    `<path d="M33 54Q39 46 45 54M55 54Q61 46 67 54" ${st}/>`,`<path d="M33 52H45M55 52H67" ${st}/>`,dot(39,52)+`<path d="M55 53Q61 46 67 53" ${st}/>`,dot(39,53)+dot(61,53)+`<path d="M32 44L46 48M68 44L54 48" ${st}/>`,
    `<g fill="${ik}"><ellipse cx="39" cy="53" rx="6.5" ry="8"/><ellipse cx="61" cy="53" rx="6.5" ry="8"/></g><g fill="#fff"><circle cx="41.5" cy="50" r="2.7"/><circle cx="63.5" cy="50" r="2.7"/><circle cx="37" cy="56.5" r="1.3"/><circle cx="59" cy="56.5" r="1.3"/></g>`,
@@ -423,18 +436,18 @@ function av(s,z=40){
    '<ellipse cx="50" cy="9" rx="21" ry="5.5" fill="none" stroke="#ffd23c" stroke-width="4"/><ellipse cx="50" cy="9" rx="21" ry="5.5" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1.2"/>',
    `<g transform="translate(71 34)"><g fill="#ff9ecb" stroke="#d6578f" stroke-width="1">${[0,72,144,216,288].map(a=>`<circle cx="${(6.4*Math.sin(a*Math.PI/180)).toFixed(1)}" cy="${(-6.4*Math.cos(a*Math.PI/180)).toFixed(1)}" r="5"/>`).join("")}</g><circle r="3.6" fill="#ffd23c" stroke="#d99a00" stroke-width="1"/></g>`][ax],
   SH="M12 100Q14 80 50 80Q88 80 88 100Z",tee=`<path d="${SH}" fill="${sh}"/>`,
-  OB=ou==9?`<path d="M6 100Q8 74 32 74H68Q92 74 94 100Z" fill="${ac2}" stroke="#0003" stroke-width="1.2"/>`:"",
+  OB=ou==9?`<path d="M6 100Q8 74 32 74H68Q92 74 94 100Z" fill="${ox}" stroke="#0003" stroke-width="1.2"/>`:"",
   O=[tee,
    tee+'<path d="M36 80L50 95L45.5 79ZM64 80L50 95L54.5 79Z" fill="#fff" stroke="#0003" stroke-width="1" stroke-linejoin="round"/>',
    tee+`<path d="M39 79L50 95L61 79Z" fill="${skn}"/><path d="M39 79L50 95L61 79" fill="none" stroke="#0003" stroke-width="1.2" stroke-linejoin="round"/>`,
-   `<clipPath id="o${u}"><path d="${SH}"/></clipPath>${tee}<g clip-path="url(#o${u})" fill="#fff" fill-opacity=".6"><rect y="85" width="100" height="4"/><rect y="93" width="100" height="4"/></g>`,
+   `<clipPath id="avo${u}"><path d="${SH}"/></clipPath>${tee}<g clip-path="url(#avo${u})" fill="#fff" fill-opacity=".6"><rect y="85" width="100" height="4"/><rect y="93" width="100" height="4"/></g>`,
    tee+'<path d="M33 78Q50 99 67 78" fill="none" stroke="#000" stroke-opacity=".2" stroke-width="7" stroke-linecap="round"/><path d="M45 92V99M55 92V99" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>',
-   tee+'<path d="M37 87L31 80.5M63 87L69 80.5" stroke="#3b6fe0" stroke-width="5" stroke-linecap="round"/><path d="M36 100V89Q36 86 39 86H61Q64 86 64 89V100Z" fill="#3b6fe0"/><circle cx="38.6" cy="88.4" r="1.8" fill="#ffd23c"/><circle cx="61.4" cy="88.4" r="1.8" fill="#ffd23c"/>',
-   tee+'<path d="M36 80L50 94L45.5 79ZM64 80L50 94L54.5 79Z" fill="#fff" stroke="#0003" stroke-width="1" stroke-linejoin="round"/><path d="M50 92L38 86V98ZM50 92L62 86V98Z" fill="#e8462e" stroke="#0003" stroke-width="1" stroke-linejoin="round"/><rect x="46.5" y="88.5" width="7" height="7" rx="2" fill="#c2301c"/>',
-   `<path d="${SH}" fill="#f4f6fa"/><path d="M36 80L50 94L45.5 79ZM64 80L50 94L54.5 79Z" fill="#dfe5ee" stroke="#0003" stroke-width="1" stroke-linejoin="round"/><path d="M46.5 88H53.5L52.4 93H47.6Z" fill="${ac2}"/><path d="M47.6 93H52.4L55.5 100H44.5Z" fill="${ac2}"/><path d="M46.5 88H53.5L52.4 93H47.6ZM47.6 93H52.4L55.5 100H44.5Z" fill="none" stroke="#0003" stroke-width="1" stroke-linejoin="round"/>`,
-   tee+`<path d="M26 87Q50 107 74 87" fill="none" stroke="#0003" stroke-width="13" stroke-linecap="round"/><path d="M26 87Q50 107 74 87" fill="none" stroke="${ac2}" stroke-width="11" stroke-linecap="round"/><path d="M26 87Q50 107 74 87" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2.2" stroke-dasharray="2.5 4.5"/><path d="M62 96L71 94L74 100H65Z" fill="${ac2}" stroke="#0003" stroke-width="1" stroke-linejoin="round"/>`,
+   tee+`<path d="M37 87L31 80.5M63 87L69 80.5" stroke="${oy||"#3b6fe0"}" stroke-width="5" stroke-linecap="round"/><path d="M36 100V89Q36 86 39 86H61Q64 86 64 89V100Z" fill="${oy||"#3b6fe0"}"/><circle cx="38.6" cy="88.4" r="1.8" fill="#ffd23c"/><circle cx="61.4" cy="88.4" r="1.8" fill="#ffd23c"/>`,
+   tee+`<path d="M36 80L50 94L45.5 79ZM64 80L50 94L54.5 79Z" fill="#fff" stroke="#0003" stroke-width="1" stroke-linejoin="round"/><path d="M50 92L38 86V98ZM50 92L62 86V98Z" fill="${oy||"#e8462e"}" stroke="#0003" stroke-width="1" stroke-linejoin="round"/><rect x="46.5" y="88.5" width="7" height="7" rx="2" fill="${oy?OCL(oa,38):"#c2301c"}"/>`,
+   `<path d="${SH}" fill="#f4f6fa"/><path d="M36 80L50 94L45.5 79ZM64 80L50 94L54.5 79Z" fill="#dfe5ee" stroke="#0003" stroke-width="1" stroke-linejoin="round"/><path d="M46.5 88H53.5L52.4 93H47.6Z" fill="${ox}"/><path d="M47.6 93H52.4L55.5 100H44.5Z" fill="${ox}"/><path d="M46.5 88H53.5L52.4 93H47.6ZM47.6 93H52.4L55.5 100H44.5Z" fill="none" stroke="#0003" stroke-width="1" stroke-linejoin="round"/>`,
+   tee+`<path d="M26 87Q50 107 74 87" fill="none" stroke="#0003" stroke-width="13" stroke-linecap="round"/><path d="M26 87Q50 107 74 87" fill="none" stroke="${ox}" stroke-width="11" stroke-linecap="round"/><path d="M26 87Q50 107 74 87" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2.2" stroke-dasharray="2.5 4.5"/><path d="M62 96L71 94L74 100H65Z" fill="${ox}" stroke="#0003" stroke-width="1" stroke-linejoin="round"/>`,
    tee+`<circle cx="36" cy="82" r="2.6" fill="#ffd23c"/><circle cx="64" cy="82" r="2.6" fill="#ffd23c"/><polygon points="${star(50,92,8,3.4)}" fill="#ffd23c" stroke="#d99a00" stroke-width="1" stroke-linejoin="round"/>`][ou];
-  return `<svg class="av" viewBox="0 0 100 100" style="width:${z}px;height:${z}px" aria-hidden="true"><defs><clipPath id="b${u}"><rect width="100" height="100" rx="24"/></clipPath>${B.g?`<linearGradient id="g${u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${B.g[0]}"/><stop offset="1" stop-color="${B.g[1]}"/></linearGradient>`:""}</defs><g clip-path="url(#b${u})"><rect width="100" height="100" fill="${B.g?`url(#g${u})`:B.f}"/>${B.d||""}</g>${OB}<rect x="42" y="74" width="16" height="16" fill="${skn}"/>${O}<g fill="${hr}">${HR[1]}</g><g fill="${skn}"><circle cx="21" cy="56" r="6"/><circle cx="79" cy="56" r="6"/>${head}</g>${D}${E}${M}<g fill="${hr}">${HR[0]}</g>${X}</svg>`;
+  return `<svg class="av" viewBox="0 0 100 100" style="width:${z}px;height:${z}px" aria-hidden="true"><defs><clipPath id="avb${u}"><rect width="100" height="100" rx="24"/></clipPath>${B.g?`<linearGradient id="avg${u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${B.g[0]}"/><stop offset="1" stop-color="${B.g[1]}"/></linearGradient>`:""}</defs><g clip-path="url(#avb${u})"><rect width="100" height="100" fill="${B.g?`url(#avg${u})`:B.f}"/>${B.d||""}${OB}<rect x="42" y="74" width="16" height="16" fill="${skn}"/>${O}<g fill="${hr}">${HR[1]}</g><g fill="${skn}"><circle cx="21" cy="56" r="6"/><circle cx="79" cy="56" r="6"/>${head}</g>${D}${E}${M}<g fill="${hr}">${HR[0]}</g>${X}</g></svg>`;
 }
 em=avN(em)||rndAv();
 LS.setItem("qz_av",em);
@@ -442,7 +455,7 @@ function avs(i,d){const a=em.split(".").map(Number);a[i]=(a[i]+d+AVN[i])%AVN[i];
 function avr(){em=rndAv();LS.setItem("qz_av",em);emUi()}
 function emUi(){
   const a=em.split(".").map(Number);
-  $("#ems").innerHTML=`<div class="avp">${av(em,110)}<button class="o" onclick="avr()">🎲 Random</button></div><div class="avg">${AVL.map((l,i)=>`<div class="avr"><button class="o s" onclick="avs(${i},-1)">‹</button><span><span>${l}</span> <small>${a[i]+1}/${AVN[i]}</small></span><button class="o s" onclick="avs(${i},1)">›</button></div>`).join("")}</div>`;
+  $("#ems").innerHTML=`<div class="avp">${av(em,110)}<button class="o" onclick="avr()">🎲 Random</button></div><div class="avg">${AVO.map(i=>`<div class="avr"><button class="o s" onclick="avs(${i},-1)">‹</button><span><span>${AVL[i]}</span> <small>${a[i]+1}/${AVN[i]}</small></span><button class="o s" onclick="avs(${i},1)">›</button></div>`).join("")}</div>`;
 }
 
 /* ---------- confetti ---------- */
@@ -574,6 +587,7 @@ function home(){
   $("#lib").innerHTML=load().filter(x=>x.title.toLowerCase().includes(f)).map(x=>
     `<div class="card row"><div style="flex:1"><b>${esc(x.title)}</b><br><small>${x.qs.length} questions</small></div>
     <button class="g" onclick="hostGame('${x.id}')">Host</button>
+    <button class="o" onclick="solo('${x.id}')">▶ Solo test</button>
     <button class="s" onclick="edit('${x.id}')">Edit</button>
     <button class="s" onclick="share('${x.id}')">Share link</button>
     <button class="s" onclick="exp('${x.id}')">Export</button>
@@ -823,18 +837,21 @@ function ask(){
   ${q.type=="text"?"<h3>Type your answer on your device</h3>":`<div class="grid">${opts(q)}</div>`}`;
   clock(t,reveal,1);cnt();
 }
+/* marks one player's answer and updates their score; c counts the picks per option. Used by the hosted game and the solo test */
+function grade(p,q,c,cf,T){
+  const tx=q.type=="text";
+  if(tx){p.f=0;const ac=acc(q),v=p.ans?norm(p.ans,q.cs):"";p.ok=!!v&&ac.some(x=>lev(x,v)<=Math.min(q.tol??1,Math.max(0,x.length-1)))}
+  else{const s=p.ans||[];p.ok=q.mode=="all"?s.length==q.ok.length&&q.ok.every(x=>s.includes(x)):s.some(x=>q.ok.includes(x));s.forEach(x=>c[x]++);p.f=0;if(q.mode=="all"&&cf.part&&!p.ok&&s.length){const r=s.filter(x=>q.ok.includes(x)).length;p.f=Math.max(0,(r-1.5*(s.length-r))/q.ok.length)}}
+  p.d=0;
+  const bs=cf.speed?Math.max(100,Math.round(1000*(1-p.ms/1000/T/2))):1000;if(p.ok){p.st=(p.st||0)+1;p.d=bs+(cf.streak?Math.min(p.st-1,5)*100:0)}else if(p.f>0){p.st=0;p.d=Math.round(bs*p.f)}
+  else{p.st=0;if(cf.pen&&p.ans!=null)p.d=-Math.min(p.score,300)}
+  p.score+=p.d;
+}
 function reveal(){
   if(H.st!="q")return;
   H.st="r";clearInterval(tk);sfx("pop");
-  const q=H.g.qs[H.i],tx=q.type=="text",ac=acc(q),c=q.a.map(()=>0),cf=H.cfg;
-  Object.values(players).forEach(p=>{
-    if(tx){p.f=0;const v=p.ans?norm(p.ans,q.cs):"";p.ok=!!v&&ac.some(x=>lev(x,v)<=Math.min(q.tol??1,Math.max(0,x.length-1)))}
-    else{const s=p.ans||[];p.ok=q.mode=="all"?s.length==q.ok.length&&q.ok.every(x=>s.includes(x)):s.some(x=>q.ok.includes(x));s.forEach(x=>c[x]++);p.f=0;if(q.mode=="all"&&cf.part&&!p.ok&&s.length){const r=s.filter(x=>q.ok.includes(x)).length;p.f=Math.max(0,(r-1.5*(s.length-r))/q.ok.length)}}
-    p.d=0;
-    const bs=cf.speed?Math.max(100,Math.round(1000*(1-p.ms/1000/H.t/2))):1000;if(p.ok){p.st=(p.st||0)+1;p.d=bs+(cf.streak?Math.min(p.st-1,5)*100:0)}else if(p.f>0){p.st=0;p.d=Math.round(bs*p.f)}
-    else{p.st=0;if(cf.pen&&p.ans!=null)p.d=-Math.min(p.score,300)}
-    p.score+=p.d;
-  });
+  const q=H.g.qs[H.i],tx=q.type=="text",c=q.a.map(()=>0),cf=H.cfg;
+  Object.values(players).forEach(p=>grade(p,q,c,cf,H.t));
   const r=rank(),L=cf.lb?lb(5):0,hit=r.filter(p=>p.ok).length,ch=cf.chart?results(q,tx,q.ok.length>1&&q.mode=="all",c):"";
   r.forEach((p,i)=>p.c.open&&p.c.send({t:"r",ok:p.ok,f:p.f,got:p.ans!=null,d:p.d,s:p.score,r:i+1,n:r.length,ca:tx?q.txt:"",lb:L}));
   $("#host").innerHTML=`<h2>${esc(q.q)}</h2>
@@ -888,6 +905,52 @@ function fin(){
 }
 function endHost(){clearInterval(tk);H&&clearTimeout(H.at);peer&&peer.destroy();peer=0;home()}
 
+/* ---------- solo test run: play a quiz alone on this device, nothing is hosted ---------- */
+/* Reuses the real player screens (pmsg) and the host's scoring (grade), so a test run behaves like a one-player game with the default settings. */
+let SO=0;
+function solo(id){
+  const g=load().find(x=>x.id==id);if(!g)return;
+  clearInterval(tk);
+  CM=(g.th||{}).mus||"";mst=CM?"custom":LS.getItem("qz_mus")||"upbeat";
+  SO={id,g,i:-1,right:0,st:"",p:{score:0,st:0},cfg:{speed:1,part:1,streak:0,pen:0,time:0}};
+  $("#host").innerHTML="";
+  pc={open:true,send:soloAns};over=0;emoOn=0;qt=0;
+  theme(g.th);$("#sx").hidden=0;music(1);soloNext();
+}
+function soloNext(){
+  if(!SO)return;
+  SO.i++;
+  if(SO.i>=SO.g.qs.length)return soloEnd();
+  const q=SO.g.qs[SO.i],t=SO.cfg.time||q.time;
+  SO.t=t;SO.t0=Date.now();SO.p.ans=null;SO.st="q";
+  pmsg({t:"q",i:SO.i,n:SO.g.qs.length,q:q.q,a:q.a,time:t,multi:q.ok.length>1&&q.mode=="all",need:0,type:q.type,img:q.img});
+  clock(t,soloReveal,1);
+}
+/* the player screen's send() lands here instead of going over the network */
+function soloAns(m){
+  if(!SO||SO.st!="q")return;
+  const q=SO.g.qs[SO.i],a=q.type=="text"?(typeof m.a=="string"?m.a.trim().slice(0,40):""):Array.isArray(m.a)?[...new Set(m.a.filter(x=>Number.isInteger(x)&&x>=0&&x<q.a.length))]:[];
+  if(!a.length)return;
+  SO.p.ans=a;SO.p.ms=Date.now()-SO.t0;
+  setTimeout(soloReveal,350);
+}
+function soloReveal(){
+  if(!SO||SO.st!="q")return;
+  SO.st="r";clearInterval(tk);
+  const q=SO.g.qs[SO.i],p=SO.p;
+  grade(p,q,q.a.map(()=>0),SO.cfg,SO.t);
+  if(p.ok)SO.right++;
+  pmsg({t:"r",ok:p.ok,f:p.f,got:p.ans!=null,d:p.d,s:p.score,r:1,n:0,ca:q.type=="text"?q.txt:q.ok.map(j=>q.a[j]).join(", "),lb:0});
+  $("#play").insertAdjacentHTML("beforeend",`<p><button class="g" onclick="soloNext()">${SO.i+1<SO.g.qs.length?"Next question":"Finish"}</button></p>`);
+}
+function soloEnd(){
+  SO.st="end";clearInterval(tk);music(0);$("#sx").hidden=1;
+  const p=SO.p,n=SO.g.qs.length;
+  if(p.score>0){sfx("win");confetti()}else sfx("end");
+  pscr(`<h1>Test finished</h1><div style="animation:bounce .6s">${av(em,112)}</div><h2>${p.score} points</h2><p>You got ${SO.right} of ${n} right</p><p class="row" style="justify-content:center"><button class="g" onclick="solo('${SO.id}')">Play again</button><button class="o" onclick="soloExit()">Back to quizzes</button></p>`);
+}
+function soloExit(){clearInterval(tk);music(0);SO=0;pc=0;$("#sx").hidden=1;home()}
+
 /* ---------- player ---------- */
 function join(){
   const code=$("#code").value.trim(),name=$("#nick").value.trim(),j=$("#jmsg");
@@ -922,7 +985,7 @@ function pmsg(m){
   }else if(m.t=="r"){
     clearInterval(tk);sfx(m.ok?"ok":m.f>0?"pop":"no");
     pscr(`<div class="${m.ok?"good":m.f>0?"part":"bad"}"><div style="font-size:5rem;animation:${m.ok||m.f>0?"bounce":"shake"} .6s">${m.ok?"🎉":m.f>0?"🙂":m.got?"💥":"⏰"}</div>
-    <h1>${m.ok?"Correct!":m.f>0?"Partly right":m.got?"Not quite":"Too slow"}</h1>${m.ca&&!m.ok?`<p>Answer: <b>${esc(m.ca)}</b></p>`:""}<h2>${m.d>0?"+":""}${m.d} points</h2><p>${av(em,30)} ${m.s} total · place ${m.r} of ${m.n}</p></div>
+    <h1>${m.ok?"Correct!":m.f>0?"Partly right":m.got?"Not quite":"Too slow"}</h1>${m.ca&&!m.ok?`<p>Answer: <b>${esc(m.ca)}</b></p>`:""}<h2>${m.d>0?"+":""}${m.d} points</h2><p>${av(em,30)} ${m.s} total${m.n?` · place ${m.r} of ${m.n}`:""}</p></div>
     ${m.lb?"<h3>Leaderboard</h3>"+rows(m.lb):""}`);
   }else if(m.t=="end"){
     over=1;clearInterval(tk);music(0);m.r==1&&m.s>0?(sfx("win"),confetti()):sfx("end");
@@ -1175,6 +1238,8 @@ Details|Detalii
 Accessory|Accesoriu
 Players also hear music and sounds on their own devices|Jucătorii aud muzica și sunetele și pe propriile dispozitive
 Outfit|Ținută
+Outfit color|Culoare ținută
+Outfit accent|Accent ținută
 🙈 Hide settings|🙈 Ascunde setările
 ⚙️ Show settings|⚙️ Arată setările
 Tap a player to zoom in or kick them|Atinge un jucător pentru a-l mări sau elimina
@@ -1195,13 +1260,19 @@ question images|imagini la întrebări
 background photo|fotografie de fundal
 custom music|muzică personalizată
 imported font|font importat
-Copy the link anyway?|Copiezi linkul oricum?`.split("\n").map(l=>l.split("|")));
+Copy the link anyway?|Copiezi linkul oricum?
+▶ Solo test|▶ Test individual
+✕ Exit test|✕ Ieși din test
+Test finished|Test încheiat
+Play again|Joacă din nou
+Back to quizzes|Înapoi la quizuri`.split("\n").map(l=>l.split("|")));
 const RU=[
 [/^Question (\d+) of (\d+)$/,m=>`Întrebarea ${m[1]} din ${m[2]}`],
 [/^(\d+) questions$/,m=>m[1]+" întrebări"],
 [/^(\d+) \/ (\d+) answered$/,m=>`${m[1]} / ${m[2]} au răspuns`],
 [/^(\d+) seconds for all$/,m=>m[1]+" secunde pentru toate"],
 [/^(\d+) of (\d+) got it right$/,m=>`${m[1]} din ${m[2]} au răspuns corect`],
+[/^You got (\d+) of (\d+) right$/,m=>`Ai răspuns corect la ${m[1]} din ${m[2]}`],
 [/^You’re in, (.*)!$/,m=>`Ai intrat, ${m[1]}!`],
 [/^Answer ([A-H])$/,m=>"Răspuns "+m[1]],
 [/^select (\d+)$/,m=>"alege "+m[1]],
@@ -1238,8 +1309,8 @@ function walk(r){
 }
 const ob=new MutationObserver(ms=>{ob.disconnect();ms.forEach(m=>m.type=="childList"?m.addedNodes.forEach(walk):walk(m.target));ob.observe(document.body,CF)});
 function apply(r){ob.disconnect();walk(r);ob.observe(document.body,CF)}
-const FLG={ro:`<svg viewBox="0 0 3 2" aria-hidden="true"><path fill="#002B7F" d="M0 0h1v2H0z"/><path fill="#FCD116" d="M1 0h1v2H1z"/><path fill="#CE1126" d="M2 0h1v2H2z"/></svg>`,
-en:`<svg viewBox="0 0 60 30" aria-hidden="true"><clipPath id="ujs"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="ujt"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath><g clip-path="url(#ujs)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#ujt)" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg>`};
+const FLG={ro:`<svg viewBox="0 0 3 2" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path fill="#002B7F" d="M0 0h1v2H0z"/><path fill="#FCD116" d="M1 0h1v2H1z"/><path fill="#CE1126" d="M2 0h1v2H2z"/></svg>`,
+en:`<svg viewBox="0 0 60 30" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><clipPath id="ujs"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="ujt"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath><g clip-path="url(#ujs)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#ujt)" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg>`};
 function togLang(){setLang(lang=="ro"?"en":"ro")}
 function setLang(l){lang=l;LS.setItem("qz_lang",l);document.documentElement.lang=l;$("#lg").innerHTML=FLG[l];apply(document.body)}
 const _al=alert,_cf=confirm,_pr=prompt,tl=s=>lang=="ro"?tr(s):s;
